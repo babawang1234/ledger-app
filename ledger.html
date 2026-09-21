@@ -214,6 +214,21 @@
   .dca-out .v { font-size: 24px; font-weight: 800; }
   .dca-out .lbl { font-size: 11px; opacity: .85; }
   .loading { text-align: center; color: var(--muted); padding: 26px; font-size: 13px; line-height: 1.7; }
+  .ai-chat { max-height: 340px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; margin-bottom: 10px; }
+  .ai-empty { color: var(--muted); font-size: 13px; text-align: center; padding: 20px 8px; line-height: 1.7; }
+  .ai-msg { max-width: 92%; padding: 10px 12px; border-radius: 14px; font-size: 13.5px; line-height: 1.65; white-space: pre-wrap; word-break: break-word; }
+  .ai-msg.user { align-self: flex-end; background: #4f46e5; color: #fff; border-bottom-right-radius: 4px; }
+  .ai-msg.ai { align-self: flex-start; background: var(--bg); border: 1px solid var(--line); border-bottom-left-radius: 4px; }
+  .ai-row textarea { width: 100%; box-sizing: border-box; border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; font-size: 14px; font-family: inherit; background: var(--bg); color: var(--text); resize: vertical; }
+  .ai-bar { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 10px; }
+  .ai-check { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); cursor: pointer; }
+  .ai-check input { margin: 0; }
+  .ai-typing { color: var(--muted); font-size: 12.5px; padding: 2px 4px; }
+  .ai-balance-bar { display: flex; align-items: center; gap: 8px; background: var(--bg); border: 1px solid var(--line); border-radius: 12px; padding: 9px 12px; margin-bottom: 10px; font-size: 13px; }
+  .ai-balance-bar .b-ico { font-weight: 800; color: #10b981; }
+  .ai-balance-bar .b-txt { flex: 1; color: var(--text); }
+  .ai-balance-bar .b-refresh { border: none; background: transparent; color: #4f46e5; font-size: 12px; font-weight: 700; cursor: pointer; padding: 2px 6px; }
+  .ai-balance { font-size: 12.5px; color: var(--muted); margin: 6px 0 10px; line-height: 1.6; }
 </style>
 </head>
 <body>
@@ -303,6 +318,17 @@
     <div class="sec"><h3>股票预测 · 四信号扫描</h3><span class="link" onclick="runStockScan()">重新扫描</span></div>
     <div class="card pad" id="finStocks"><div class="loading">点击上方「重新扫描」开始</div></div>
 
+    <div class="sec"><h3>AI 理财助手 · DeepSeek</h3><span class="link" onclick="openAiSettings()">设置密钥</span></div>
+    <div class="card pad" id="finAI">
+      <div class="ai-balance-bar"><span class="b-ico">¥</span><span class="b-txt" id="finAiBalanceText">余额加载中…</span><button class="b-refresh" onclick="queryAiBalance()">刷新</button></div>
+      <div class="ai-chat" id="aiChat"><div class="ai-empty">先在右上角「设置密钥」填入 DeepSeek API Key，然后输入你的理财问题（如：结合当前行情，现在该开始定投吗？），AI 会结合你的账本与最新行情给出明确建议。</div></div>
+      <div class="ai-row"><textarea id="aiInput" rows="2" placeholder="输入你的理财问题…"></textarea></div>
+      <div class="ai-bar">
+        <label class="ai-check"><input type="checkbox" id="aiCtx" checked /> 附带上我的账本与行情</label>
+        <button class="btn" onclick="finAIAsk()">发送</button>
+      </div>
+    </div>
+
     <div class="fin-note" style="padding:0 20px 20px;text-align:center;">行情来自第三方公开接口，可能有延迟或缺失，仅供参考，不构成任何投资建议。股市有风险，入市需谨慎。</div>
   </section>
 
@@ -359,10 +385,6 @@
     <label>项目</label>
     <select id="rProject"></select>
   </div>
-  <div class="field" id="rSubField">
-    <label>子项目（可选）</label>
-    <select id="rSub"><option value="">— 无 —</option></select>
-  </div>
   <div class="field">
     <label>备注</label>
     <input id="rNote" type="text" placeholder="备注说明（可选）" />
@@ -383,10 +405,6 @@
   <div class="grab"></div>
   <h4 id="pTitle">新建项目</h4>
   <div class="field"><label>名称</label><input id="pName" placeholder="例如：生活开支" /></div>
-  <div class="field">
-    <label>所属上级（可选，作为子项目）</label>
-    <select id="pParent"><option value="">— 顶层项目 —</option></select>
-  </div>
   <div class="field">
     <label>颜色</label>
     <div class="swatches" id="pColors"></div>
@@ -418,10 +436,6 @@
     <label>所属项目</label>
     <select id="rcProject"></select>
   </div>
-  <div class="field" id="rcSubField">
-    <label>子项目（可选）</label>
-    <select id="rcSub"><option value="">— 无 —</option></select>
-  </div>
   <div class="field">
     <label>预计到账日期</label>
     <input id="rcDate" type="date" />
@@ -448,6 +462,9 @@
     <span class="link" onclick="closeProjDetail()">关闭</span>
   </div>
   <div class="balance" id="pdBalance" style="margin:0 0 14px;padding:18px 18px 16px;"></div>
+  <div class="btn-row" style="margin:0 0 10px;">
+    <button class="btn" style="flex:1;" onclick="recordInProject()">+ 记一笔到该项目</button>
+  </div>
   <div class="card" id="pdList" style="margin:0;"></div>
 </div>
 
@@ -481,6 +498,32 @@
   <button class="btn" onclick="closeSettings()">完成</button>
 </div>
 
+<!-- AI settings sheet -->
+<div class="overlay" id="ovlAi"></div>
+<div class="sheet" id="sheetAi">
+  <div class="grab"></div>
+  <h4>AI 理财助手设置</h4>
+  <div class="field">
+    <label>DeepSeek API Key</label>
+    <input id="aiKey" type="password" placeholder="sk-..." autocomplete="off" />
+  </div>
+  <div class="field">
+    <label>模型</label>
+    <select id="aiModel">
+      <option value="deepseek-chat">deepseek-chat（快速回答）</option>
+      <option value="deepseek-reasoner">deepseek-reasoner（深度思考，更慢但更细致）</option>
+    </select>
+  </div>
+  <div class="muted f12" style="line-height:1.7;margin-bottom:8px;">
+    Key 只保存在本机浏览器本地（localStorage），不会写入页面源码、不会上传到别处。请前往 <b>platform.deepseek.com</b> 注册并创建 API Key（按量计费，约 ¥1/百万 token）。
+  </div>
+  <div class="ai-balance" id="aiBalance">尚未查询余额</div>
+  <div class="btn-row">
+    <button class="btn ghost" onclick="queryAiBalance()">查询余额</button>
+    <button class="btn" onclick="saveAiSettings()">保存</button>
+  </div>
+</div>
+
 <input type="file" id="fileInput" accept=".json" style="display:none" />
 
 <div class="toast" id="toast"></div>
@@ -495,7 +538,7 @@
   let flowFilter = 'all';
   let statCursor = new Date();
   let editRecordId = null, editProjectId = null, editReceivableId = null;
-  let expanded = new Set();
+  let curDetailId = null;
   let selColor = COLORS[0];
 
   function load(){
@@ -517,8 +560,6 @@
   function toast(msg){ const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),1800); }
   function short(s,n){ s=String(s||''); return s.length>n?s.slice(0,n)+'…':s; }
   function projectById(id){ return state.projects.find(p=>p.id===id); }
-  function childrenOf(id){ return state.projects.filter(p=>p.parentId===id); }
-  function topProjects(){ return state.projects.filter(p=>!p.parentId); }
   function initials(name){ const s=String(name||'').trim(); return s?[...s][0].toUpperCase() : '?'; }
   function colorOf(p){ return p && p.color ? p.color : '#8a90a6'; }
 
@@ -533,19 +574,13 @@
     state.records.forEach(r=>{ if(r.type==='income') inc+=r.amount; else exp+=r.amount; });
     return inc-exp;
   }
-  // rollup a record to top-level project by walking parents
-  function topAncestor(p){
-    let cur=p, guard=0;
-    while(cur && cur.parentId && guard<20){ const par=projectById(cur.parentId); if(!par) break; cur=par; guard++; }
-    return cur;
-  }
   function projectTotals(pred){
     const map={};
     state.records.forEach(r=>{
       if(pred && !pred(r)) return;
       const p=projectById(r.projectId); if(!p) return;
-      const top=topAncestor(p); const id=top?top.id:'none';
-      map[id]=map[id]||{name:top?top.name:'未分类',color:top?colorOf(top):'#8a90a6',amt:0};
+      const id=p.id;
+      map[id]=map[id]||{name:p.name,color:colorOf(p),amt:0};
       map[id].amt+=r.amount;
     });
     return Object.values(map).sort((a,b)=>b.amt-a.amt);
@@ -554,24 +589,16 @@
     const map={};
     state.projects.forEach(p=>{
       let total=0;
-      // include records directly + records of descendants of this project
       state.records.forEach(r=>{
         if(pred && !pred(r)) return;
         if(r.projectId===p.id){ total += (r.type==='income'? r.amount : -r.amount); }
-        else { const pp=projectById(r.projectId); if(pp && isDescendant(pp,p.id)) total += (r.type==='income'? r.amount : -r.amount); }
       });
       map[p.id]=total;
     });
     return map;
   }
-  function isDescendant(p, ancId){
-    let cur=p, g=0;
-    while(cur && cur.parentId && g<20){ if(cur.parentId===ancId) return true; cur=projectById(cur.parentId); g++; }
-    return false;
-  }
-
   // ---------- render ----------
-  function switchView(v){ view=v; document.querySelectorAll('#view-home,#view-flow,#view-projects,#view-stats,#view-finance').forEach(s=>s.classList.add('hidden')); document.getElementById('view-'+v).classList.remove('hidden'); document.querySelectorAll('.nav .tab').forEach(b=>b.classList.toggle('on', b.dataset.v===v)); window.scrollTo(0,0); render(); if(v==='finance') initFinance(); }
+  function switchView(v){ view=v; document.querySelectorAll('#view-home,#view-flow,#view-projects,#view-stats,#view-finance').forEach(s=>s.classList.add('hidden')); document.getElementById('view-'+v).classList.remove('hidden'); document.querySelectorAll('.nav .tab').forEach(b=>b.classList.toggle('on', b.dataset.v===v)); window.scrollTo(0,0); render(); if(v==='finance'){ initFinance(); if(aiStoreGet(AI_KEY_STORE)) queryAiBalance(); } }
 
   function render(){ renderHome(); renderFlow(); renderProjects(); renderStats(); }
 
@@ -600,23 +627,20 @@
   }
   function receivableHTML(x){
     const p=projectById(x.projectId);
-    const sub = x.subId? projectById(x.subId): null;
     const color = p? colorOf(p) : '#8a90a6';
     return '<div class="tx" onclick="openReceivableEdit(\''+x.id+'\')">'+
       '<div class="avatar" style="background:'+color+'">'+esc(initials(x.name||(p?p.name:'?')))+'</div>'+
-      '<div class="body"><div class="name">'+esc(x.name||(p?p.name:'未分类'))+'</div><div class="meta">'+esc((p?p.name:'')+(sub?' · '+sub.name:'')+' · '+x.date)+'</div></div>'+
+      '<div class="body"><div class="name">'+esc(x.name||(p?p.name:'未分类'))+'</div><div class="meta">'+esc((p?p.name:'')+' · '+x.date)+'</div></div>'+
       '<div class="amt inc">+¥'+money(x.amount)+'</div></div>';
   }
 
   function recHTML(r){
     const p=projectById(r.projectId);
-    const sub = r.subId? projectById(r.subId): null;
-    const name = esc(sub? sub.name : (p? p.name : '未分类'));
+    const name = esc(p? p.name : '未分类');
     const color = p? colorOf(p) : '#8a90a6';
-    const meta = esc((p&&sub? (p.name+' · '):'') + (r.note? short(r.note,16):''));
     return '<div class="tx" onclick="openEdit(\''+r.id+'\')">'+
       '<div class="avatar" style="background:'+color+'">'+esc(initials(name))+'</div>'+
-      '<div class="body"><div class="name">'+name+'</div><div class="meta">'+esc(r.date)+ (r.note?' · ':'') + meta +'</div></div>'+
+      '<div class="body"><div class="name">'+name+'</div><div class="meta">'+esc(r.date)+ (r.note?' · '+esc(short(r.note,16)):'') +'</div></div>'+
       '<div class="amt '+(r.type==='income'?'inc':'exp')+'">'+(r.type==='income'?'+':'−')+'¥'+money(r.amount)+'</div></div>';
   }
 
@@ -637,37 +661,31 @@
   function renderProjects(){
     const el=document.getElementById('projectList');
     const balMap = projectBalanceMap();
-    const top = topProjects();
     let html='';
-    top.forEach(p=> html += projectNodeHTML(p, balMap, 0));
-    el.innerHTML = top.length? html : empty('还没有项目，点「+ 新建项目」开始');
+    state.projects.forEach(p=> html += projectNodeHTML(p, balMap));
+    el.innerHTML = state.projects.length? html : empty('还没有项目，点「+ 新建项目」开始');
     renderProjectChart();
   }
 
-  function projectNodeHTML(p, balMap, depth){
-    const kids = childrenOf(p.id);
+  function projectNodeHTML(p, balMap){
     const bal = balMap[p.id]||0;
-    const isExpanded = expanded.has(p.id);
-    let html = '<div class="prj" style="'+ (depth? 'padding-left:'+ (16+depth*28) +'px;':'')+'">';
-    if(kids.length){ html += '<span class="tree-toggle" onclick="toggleTree(\''+p.id+'\')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="transform:'+(isExpanded?'rotate(90deg)':'')+';transition:.15s"><path d="M9 6l6 6-6 6"/></svg></span>'; }
-    else { html += '<span class="tree-toggle"></span>'; }
+    const cnt = state.records.filter(r=>r.projectId===p.id).length;
+    let html = '<div class="prj">';
     html += '<div class="dot" style="background:'+colorOf(p)+'">'+esc(initials(p.name))+'</div>';
-    html += '<div style="flex:1;min-width:0;cursor:pointer;" onclick="openProjDetail(\''+p.id+'\')"><div class="pname">'+esc(p.name)+'</div><div class="psub">'+(kids.length? kids.length+' 个子项目 · 点击看明细' : (p.budget? '预算 ¥'+money(p.budget)+' · 点击看明细':'点击查看明细'))+'</div></div>';
+    html += '<div style="flex:1;min-width:0;cursor:pointer;" onclick="openProjDetail(\''+p.id+'\')"><div class="pname">'+esc(p.name)+'</div><div class="psub">'+(cnt? cnt+' 笔明细 · 点击查看' : (p.budget? '预算 ¥'+money(p.budget)+' · 点击查看':'点击查看明细'))+'</div></div>';
     html += '<div class="ptotal" style="color:'+(bal>=0?'var(--income)':'var(--expense)')+'">'+ (bal>=0?'+':'')+ money(bal) +'</div>';
-    html += '<div class="pact"><button onclick="openProject(\''+p.id+'\')" title="编辑"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9M16.5 3.5a2.12 2.12 0 013 3L7 19l-4 1 1-4z"/></svg></button><button onclick="openAddSub(\''+p.id+'\')" title="加子项目"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg></button></div>';
+    html += '<div class="pact"><button onclick="openProject(\''+p.id+'\')" title="编辑"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9M16.5 3.5a2.12 2.12 0 013 3L7 19l-4 1 1-4z"/></svg></button></div>';
     html += '</div>';
-    if(isExpanded){ kids.forEach(k=> html += projectNodeHTML(k, balMap, depth+1)); }
     return html;
   }
 
   // ---------- project detail ----------
   function openProjDetail(id){
     const p=projectById(id); if(!p) return;
-    // collect records: direct + descendant projects
+    curDetailId = p.id;
     let inc=0, exp=0; const recs=[];
     state.records.forEach(r=>{
-      const rp=projectById(r.projectId); if(!rp) return;
-      if(rp.id===p.id || isDescendant(rp, p.id)){
+      if(r.projectId===p.id){
         recs.push(r);
         if(r.type==='income') inc+=r.amount; else exp+=r.amount;
       }
@@ -692,7 +710,7 @@
     }
     show('ovlProjDetail','sheetProjDetail');
   }
-  function closeProjDetail(){ hide('ovlProjDetail','sheetProjDetail'); }
+  function closeProjDetail(){ curDetailId=null; hide('ovlProjDetail','sheetProjDetail'); }
 
   function renderProjectChart(){
     const el=document.getElementById('projectChart');
@@ -761,26 +779,13 @@
   }
   function fillProjects(){
     const sel=document.getElementById('rProject');
-    const sub=document.getElementById('rSub');
     const cur=sel.value;
     const opts=['<option value="">— 选择项目 —</option>'];
-    optionsTree(null,0).forEach(o=>opts.push(o));
+    state.projects.forEach(p=>opts.push('<option value="'+p.id+'">'+esc(p.name)+'</option>'));
     sel.innerHTML=opts.join('');
     sel.value=cur;
-    fillSubs();
   }
-  function optionsTree(parentId,depth){
-    let arr=[];
-    const kids=state.projects.filter(p=>p.parentId===parentId);
-    kids.forEach(p=>{ const pad='　'.repeat(depth); arr.push('<option value="'+p.id+'">'+esc(pad+(depth?'· ':'')+p.name)+'</option>'); arr=arr.concat(optionsTree(p.id,depth+1)); });
-    return arr;
-  }
-  function fillSubs(){
-    const pid=document.getElementById('rProject').value;
-    const sub=document.getElementById('rSub');
-    sub.innerHTML='<option value="">— 无 —</option>' + childrenOf(pid).map(p=>'<option value="'+p.id+'">'+esc(p.name)+'</option>').join('');
-  }
-  function openRecord(){
+  function openRecord(pid){
     editRecordId=null;
     rtype='expense';
     document.querySelectorAll('#rtypeChips .chip').forEach(x=>x.classList.toggle('on', x.dataset.t==='expense'));
@@ -789,7 +794,7 @@
     document.getElementById('rDate').value=today();
     document.getElementById('rDel').style.display='none';
     fillProjects();
-    document.getElementById('rSub').value='';
+    if(pid) document.getElementById('rProject').value=pid;
     show('ovlRecord','sheetRecord');
     setTimeout(()=>document.getElementById('rAmount').focus(),320);
   }
@@ -803,8 +808,6 @@
     document.getElementById('rDate').value=r.date;
     fillProjects();
     document.getElementById('rProject').value=r.projectId||'';
-    fillSubs();
-    document.getElementById('rSub').value=r.subId||'';
     document.getElementById('rDel').style.display='flex';
     show('ovlRecord','sheetRecord');
   }
@@ -813,16 +816,17 @@
     if(isNaN(amt)||amt<=0){ toast('请输入有效金额'); return; }
     const pid=document.getElementById('rProject').value;
     if(!pid){ toast('请选择项目'); return; }
-    const subId=document.getElementById('rSub').value||null;
     const note=document.getElementById('rNote').value.trim();
     const date=document.getElementById('rDate').value||today();
-    const rec={ id: editRecordId||uid(), type:rtype, amount:Math.round(amt*100)/100, projectId:pid, subId, note, date, ts:Date.now() };
+    const rec={ id: editRecordId||uid(), type:rtype, amount:Math.round(amt*100)/100, projectId:pid, subId:null, note, date, ts:Date.now() };
     if(editRecordId){ const i=state.records.findIndex(x=>x.id===editRecordId); if(i>=0) state.records[i]=rec; }
     else state.records.push(rec);
     persist(); render();
     hide('ovlRecord','sheetRecord');
+    if(curDetailId && document.getElementById('sheetProjDetail').classList.contains('show')) openProjDetail(curDetailId);
     toast('已保存');
   }
+  function recordInProject(){ if(curDetailId) openRecord(curDetailId); }
   function delRecord(){
     if(!editRecordId) return;
     state.records=state.records.filter(x=>x.id!==editRecordId);
@@ -832,18 +836,11 @@
   // ---------- receivable sheet ----------
   function fillRcProjects(){
     const sel=document.getElementById('rcProject');
-    const sub=document.getElementById('rcSub');
     const cur=sel.value;
     const opts=['<option value="">— 选择项目 —</option>'];
-    optionsTree(null,0).forEach(o=>opts.push(o));
+    state.projects.forEach(p=>opts.push('<option value="'+p.id+'">'+esc(p.name)+'</option>'));
     sel.innerHTML=opts.join('');
     sel.value=cur;
-    fillRcSubs();
-  }
-  function fillRcSubs(){
-    const pid=document.getElementById('rcProject').value;
-    const sub=document.getElementById('rcSub');
-    sub.innerHTML='<option value="">— 无 —</option>' + childrenOf(pid).map(p=>'<option value="'+p.id+'">'+esc(p.name)+'</option>').join('');
   }
   function openReceivable(){
     editReceivableId=null;
@@ -855,7 +852,6 @@
     document.getElementById('rcDel').style.display='none';
     document.getElementById('rcSettleRow').style.display='none';
     fillRcProjects();
-    document.getElementById('rcSub').value='';
     show('ovlReceivable','sheetReceivable');
   }
   function openReceivableEdit(id){
@@ -868,8 +864,6 @@
     document.getElementById('rcDate').value=x.date;
     fillRcProjects();
     document.getElementById('rcProject').value=x.projectId||'';
-    fillRcSubs();
-    document.getElementById('rcSub').value=x.subId||'';
     document.getElementById('rcDel').style.display='flex';
     document.getElementById('rcSettleRow').style.display='block';
     show('ovlReceivable','sheetReceivable');
@@ -880,10 +874,9 @@
     const pid=document.getElementById('rcProject').value;
     if(!pid){ toast('请选择项目'); return; }
     const name=document.getElementById('rcName').value.trim();
-    const subId=document.getElementById('rcSub').value||null;
     const note=document.getElementById('rcNote').value.trim();
     const date=document.getElementById('rcDate').value||today();
-    const rc={ id: editReceivableId||uid(), name, amount:Math.round(amt*100)/100, projectId:pid, subId, note, date, status:'pending', ts:Date.now() };
+    const rc={ id: editReceivableId||uid(), name, amount:Math.round(amt*100)/100, projectId:pid, subId:null, note, date, status:'pending', ts:Date.now() };
     if(editReceivableId){ const i=state.receivables.findIndex(x=>x.id===editReceivableId); if(i>=0){ rc.status=state.receivables[i].status; rc.ts=state.receivables[i].ts; state.receivables[i]=rc; } }
     else state.receivables.push(rc);
     persist(); render();
@@ -900,7 +893,7 @@
     const x=receivableById(editReceivableId); if(!x) return;
     x.status='done';
     // 转为一条收入记录
-    const rec={ id:uid(), type:'income', amount:x.amount, projectId:x.projectId, subId:x.subId, note:(x.name? x.name+'（到账）': '待入款项到账'), date:today(), ts:Date.now() };
+    const rec={ id:uid(), type:'income', amount:x.amount, projectId:x.projectId, subId:null, note:(x.name? x.name+'（到账）': '待入款项到账'), date:today(), ts:Date.now() };
     state.records.push(rec);
     persist(); render();
     hide('ovlReceivable','sheetReceivable');
@@ -913,20 +906,11 @@
     document.getElementById('pTitle').textContent = id?'编辑项目':'新建项目';
     document.getElementById('pName').value = id? (projectById(id)?.name||'') : '';
     document.getElementById('pBudget').value = id? (projectById(id)?.budget||'') : '';
-    // parent select (exclude self + descendants)
-    const ps=document.getElementById('pParent');
-    const opts=['<option value="">— 顶层项目 —</option>'];
-    state.projects.forEach(p=>{ if(p.id===id) return; if(id && isDescendant(p,id)) return; opts.push('<option value="'+p.id+'">'+esc(p.name)+'</option>'); });
-    ps.innerHTML=opts.join('');
-    if(id){ const p=projectById(id); ps.value=p?.parentId||''; selColor=p?.color||COLORS[0]; }
+    if(id){ const p=projectById(id); selColor=p?.color||COLORS[0]; }
     else selColor=COLORS[Math.floor(Math.random()*COLORS.length)];
     renderSwatches();
     document.getElementById('pDel').style.display = id? 'block':'none';
     show('ovlProject','sheetProject');
-  }
-  function openAddSub(pid){
-    openProject(null);
-    document.getElementById('pParent').value=pid;
   }
   function renderSwatches(){
     const w=document.getElementById('pColors');
@@ -935,27 +919,21 @@
   function saveProject(){
     const name=document.getElementById('pName').value.trim();
     if(!name){ toast('请输入项目名称'); return; }
-    const parentId=document.getElementById('pParent').value||null;
     const budget=parseFloat(document.getElementById('pBudget').value)||0;
     if(editProjectId){
       const p=projectById(editProjectId);
-      if(p){ p.name=name; p.parentId=parentId; p.color=selColor; p.budget=budget?budget:0; }
+      if(p){ p.name=name; p.color=selColor; p.budget=budget?budget:0; }
     } else {
-      state.projects.push({ id:uid(), name, parentId, color:selColor, budget:budget?budget:0 });
+      state.projects.push({ id:uid(), name, color:selColor, budget:budget?budget:0 });
     }
     persist(); render(); hide('ovlProject','sheetProject'); toast('已保存');
   }
   function delProject(){
     if(!editProjectId) return;
-    // remove project + descendants + reassign records
-    const ids=new Set([editProjectId]);
-    let changed=true;
-    while(changed){ changed=false; state.projects.forEach(p=>{ if(p.parentId && ids.has(p.parentId) && !ids.has(p.id)){ ids.add(p.id); changed=true; } }); }
-    state.projects=state.projects.filter(p=>!ids.has(p.id));
-    state.records.forEach(r=>{ if(ids.has(r.projectId)) r.projectId=null; if(ids.has(r.subId)) r.subId=null; });
+    state.projects=state.projects.filter(p=>p.id!==editProjectId);
+    state.records.forEach(r=>{ if(r.projectId===editProjectId) r.projectId=null; });
     persist(); render(); hide('ovlProject','sheetProject'); toast('已删除');
   }
-  function toggleTree(id){ expanded.has(id)? expanded.delete(id): expanded.add(id); renderProjects(); }
 
   // ---------- settings ----------
   function openSettings(){ show('ovlSettings','sheetSettings'); }
@@ -965,10 +943,10 @@
     download(blob,'分项账本-备份.json');
   }
   function exportCSV(){
-    let rows=[['日期','类型','项目','子项目','金额','备注']];
+    let rows=[['日期','类型','项目','金额','备注']];
     state.records.slice().sort((a,b)=>a.date<b.date?-1:1).forEach(r=>{
-      const p=projectById(r.projectId); const s=r.subId?projectById(r.subId):null;
-      rows.push([r.date, r.type==='income'?'收入':'支出', p?p.name:'', s?s.name:'', money(r.amount), r.note||'']);
+      const p=projectById(r.projectId);
+      rows.push([r.date, r.type==='income'?'收入':'支出', p?p.name:'', money(r.amount), r.note||'']);
     });
     const csv=rows.map(r=>r.map(c=>'"'+String(c).replace(/"/g,'""')+'"').join(',')).join('\r\n');
     const blob=new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8;'});
@@ -999,8 +977,6 @@
   document.querySelectorAll('.overlay').forEach(o=>o.addEventListener('click',()=>{ o.classList.remove('show'); document.querySelectorAll('.sheet').forEach(s=>s.classList.remove('show')); }));
 
   // ---------- bindings ----------
-  document.getElementById('rProject').addEventListener('change', fillSubs);
-  document.getElementById('rcProject').addEventListener('change', fillRcSubs);
   document.querySelectorAll('#flowFilters .pill').forEach(b=>b.onclick=()=>{ flowFilter=b.dataset.f; document.querySelectorAll('#flowFilters .pill').forEach(x=>x.classList.remove('on')); b.classList.add('on'); renderFlow(); });
   document.querySelectorAll('#themeSeg button').forEach(b=>b.onclick=()=>applyTheme(b.dataset.th));
   bindTypeChips();
@@ -1380,17 +1356,137 @@
       '<div class="fin-mini" style="color:rgba(255,255,255,.85);margin-top:8px;"><span>累计投入 ¥'+money(invested)+'</span><span>预计收益 ¥'+money(gain)+'</span></div>';
   }
 
+  // ---------- AI 理财助手 ----------
+  const AI_URL='https://api.deepseek.com/chat/completions';
+  const AI_KEY_STORE='fin_ai_key', AI_MODEL_STORE='fin_ai_model', AI_LOG='fin_ai_log', AI_BALANCE_STORE='fin_ai_balance';
+  let aiLog = [];
+  try{ aiLog = JSON.parse(localStorage.getItem(AI_LOG)||'[]'); }catch(e){ aiLog = []; }
+  function aiStoreGet(k){ try{ return localStorage.getItem(k)||''; }catch(e){ return ''; } }
+  function aiStoreSet(k,v){ try{ localStorage.setItem(k,v); }catch(e){} }
+  function openAiSettings(){
+    document.getElementById('aiKey').value = aiStoreGet(AI_KEY_STORE);
+    const sel=document.getElementById('aiModel');
+    sel.value = (aiStoreGet(AI_MODEL_STORE)==='deepseek-reasoner')?'deepseek-reasoner':'deepseek-chat';
+    show('ovlAi','sheetAi');
+  }
+  function closeAiSettings(){ hide('ovlAi','sheetAi'); }
+  function saveAiSettings(){
+    aiStoreSet(AI_KEY_STORE, document.getElementById('aiKey').value.trim());
+    aiStoreSet(AI_MODEL_STORE, document.getElementById('aiModel').value);
+    closeAiSettings();
+    renderAiLog();
+    queryAiBalance();
+    toast('API Key 已保存');
+  }
+  function fmtBalanceText(d){
+    const info=(d && d.balance_infos && d.balance_infos[0])||{};
+    const cur=(d && d.balance_infos && d.balance_infos[0] && d.balance_infos[0].currency)||'CNY';
+    const sym=cur==='USD'?'$':'¥';
+    const total=Number(info.total_balance||0), granted=Number(info.granted_balance||0), topped=Number(info.topped_up_balance||0);
+    return '余额 '+sym+money(total)+'（充值 '+sym+money(topped)+' · 赠送 '+sym+money(granted)+'）';
+  }
+  function setAiBalanceText(t){
+    const e1=document.getElementById('aiBalance'), e2=document.getElementById('finAiBalanceText');
+    if(e1) e1.textContent=t;
+    if(e2) e2.textContent=t;
+  }
+  async function queryAiBalance(){
+    const key=aiStoreGet(AI_KEY_STORE);
+    if(!key){ setAiBalanceText('未设置 API Key'); return; }
+    setAiBalanceText('查询中…');
+    try{
+      const res=await fetch('https://api.deepseek.com/user/balance',{headers:{'Authorization':'Bearer '+key}});
+      if(!res.ok){
+        let em='HTTP '+res.status;
+        try{ const j=await res.json(); if(j&&j.error&&j.error.message) em=j.error.message; }catch(e){}
+        throw new Error(em);
+      }
+      const d=await res.json();
+      const txt=fmtBalanceText(d);
+      aiStoreSet(AI_BALANCE_STORE, txt);
+      setAiBalanceText(txt);
+    }catch(e){
+      setAiBalanceText('余额查询失败：'+e.message);
+    }
+  }
+  function renderAiBalance(){
+    const cached=aiStoreGet(AI_BALANCE_STORE);
+    const key=aiStoreGet(AI_KEY_STORE);
+    const txt = cached || (key? '点击「刷新」查询余额' : '未设置 API Key');
+    const e2=document.getElementById('finAiBalanceText'); if(e2) e2.textContent=txt;
+    const e1=document.getElementById('aiBalance'); if(e1) e1.textContent=cached||'尚未查询余额';
+  }
+  function txtOf(id){ const el=document.getElementById(id); return el? el.innerText.replace(/\s+/g,' ').trim().slice(0,900) : ''; }
+  function buildAiContext(){
+    const bal=totalBalance(), ms=monthStats(thisMonth());
+    let s='【我的账本概况】累计结余 ¥'+money(bal)+'；本月收入 ¥'+money(ms.inc)+'；本月支出 ¥'+money(ms.exp)+'；项目数 '+state.projects.length+'；待入款项 '+pendingReceivables().length+' 笔共 ¥'+money(pendingTotal())+'。\n';
+    s+='【当前理财行情】\n· 大盘指数: '+(txtOf('finIndex')||'未加载')+'\n· 黄金: '+(txtOf('finGold')||'未加载')+'\n· 汇率: '+(txtOf('finFx')||'未加载')+'\n· 优选基金: '+(txtOf('finFunds')||'未加载')+'\n· 股票四信号结果: '+(txtOf('finStocks')||'未加载');
+    return s;
+  }
+  function renderAiLog(){
+    const el=document.getElementById('aiChat');
+    if(!aiLog.length){ el.innerHTML='<div class="ai-empty">先在右上角「设置密钥」填入 DeepSeek API Key，然后输入你的理财问题。</div>'; return; }
+    el.innerHTML = aiLog.map(m=>'<div class="ai-msg '+(m.role==='user'?'user':'ai')+'">'+esc(m.content)+'</div>').join('');
+    el.scrollTop=el.scrollHeight;
+  }
+  function aiAppend(role, content){
+    aiLog.push({role, content});
+    if(aiLog.length>60) aiLog=aiLog.slice(-60);
+    aiStoreSet(AI_LOG, JSON.stringify(aiLog));
+    renderAiLog();
+  }
+  async function finAIAsk(){
+    const inputEl=document.getElementById('aiInput');
+    const q=(inputEl.value||'').trim();
+    if(!q){ toast('请输入问题'); return; }
+    const key=aiStoreGet(AI_KEY_STORE);
+    if(!key){ toast('请先设置 API Key'); openAiSettings(); return; }
+    inputEl.value='';
+    aiAppend('user', q);
+    aiAppend('ai', '思考中…');
+    const model=aiStoreGet(AI_MODEL_STORE)||'deepseek-chat';
+    const sys='你是专业的理财顾问与投资分析助手。请结合用户提供的账本与行情数据，用简体中文给出明确、具体、可执行的分析与建议，并在涉及投资时明确提示风险（不构成任何收益保证）。数据不足时，直接指出需要用户补充什么。';
+    const withCtx=document.getElementById('aiCtx') && document.getElementById('aiCtx').checked;
+    const userContent=withCtx ? (q+'\n\n'+buildAiContext()) : q;
+    const body={ model, stream:false, messages:[{role:'system',content:sys},{role:'user',content:userContent}] };
+    if(model==='deepseek-chat') body.temperature=0.7;
+    try{
+      const res=await fetch(AI_URL,{
+        method:'POST',
+        headers:{'Content-Type':'application/json','Authorization':'Bearer '+key},
+        body:JSON.stringify(body)
+      });
+      if(!res.ok){
+        let em='HTTP '+res.status;
+        try{ const j=await res.json(); if(j&&j.error&&j.error.message) em=j.error.message; }catch(e){}
+        throw new Error(em);
+      }
+      const data=await res.json();
+      const ans=(data && data.choices && data.choices[0] && data.choices[0].message) ? data.choices[0].message.content : '';
+      aiLog[aiLog.length-1]={role:'ai', content: ans || '（未返回内容）'};
+      aiStoreSet(AI_LOG, JSON.stringify(aiLog));
+      renderAiLog();
+    }catch(e){
+      aiLog[aiLog.length-1]={role:'ai', content:'请求失败：'+e.message+'。请检查网络或 API Key 是否正确。'};
+      aiStoreSet(AI_LOG, JSON.stringify(aiLog));
+      renderAiLog();
+    }
+  }
+
   // ---------- init ----------
   applyTheme(localStorage.getItem('ledger_theme')||'light');
   render();
+  renderAiLog();
+  renderAiBalance();
 
   // expose for inline onclick
   window.switchView=switchView; window.openRecord=openRecord; window.openEdit=openEdit; window.saveRecord=saveRecord; window.delRecord=delRecord;
-  window.openProject=openProject; window.openAddSub=openAddSub; window.saveProject=saveProject; window.delProject=delProject; window.toggleTree=toggleTree;
-  window.openProjDetail=openProjDetail; window.closeProjDetail=closeProjDetail;
+  window.openProject=openProject; window.saveProject=saveProject; window.delProject=delProject;
+  window.openProjDetail=openProjDetail; window.closeProjDetail=closeProjDetail; window.recordInProject=recordInProject;
   window.openReceivable=openReceivable; window.openReceivableEdit=openReceivableEdit; window.saveReceivable=saveReceivable; window.delReceivable=delReceivable; window.settleReceivable=settleReceivable;
   window.openSettings=openSettings; window.closeSettings=closeSettings; window.exportData=exportData; window.exportCSV=exportCSV; window.importData=importData; window.clearAll=clearAll; window.shiftMonth=shiftMonth;
   window.refreshFinance=refreshFinance; window.calcDca=calcDca; window.runStockScan=runStockScan; window.initFinance=initFinance;
+  window.openAiSettings=openAiSettings; window.saveAiSettings=saveAiSettings; window.finAIAsk=finAIAsk; window.queryAiBalance=queryAiBalance;
 })();
 </script>
 </body>
