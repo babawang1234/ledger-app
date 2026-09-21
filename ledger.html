@@ -229,6 +229,61 @@
   .ai-balance-bar .b-txt { flex: 1; color: var(--text); }
   .ai-balance-bar .b-refresh { border: none; background: transparent; color: #4f46e5; font-size: 12px; font-weight: 700; cursor: pointer; padding: 2px 6px; }
   .ai-balance { font-size: 12.5px; color: var(--muted); margin: 6px 0 10px; line-height: 1.6; }
+
+  /* ===== 高级毛玻璃 + 渐变美化 ===== */
+  body {
+    background:
+      radial-gradient(1100px 560px at 18% -8%, #ede9ff 0%, rgba(237,233,255,0) 60%),
+      radial-gradient(900px 480px at 108% -2%, #dbeafe 0%, rgba(219,234,254,0) 55%),
+      linear-gradient(180deg, #f5f4fb 0%, #eef0f8 100%);
+    background-attachment: fixed;
+  }
+  body.dark {
+    background:
+      radial-gradient(1100px 620px at 16% -10%, rgba(124,58,237,.28) 0%, rgba(124,58,237,0) 60%),
+      radial-gradient(900px 520px at 108% -4%, rgba(14,165,233,.20) 0%, rgba(14,165,233,0) 55%),
+      linear-gradient(180deg, #0e1018 0%, #12141d 100%);
+    background-attachment: fixed;
+  }
+  .header { background: transparent; }
+  .header .brand { font-size: 23px; background: linear-gradient(120deg, #4f46e5, #a855f7 60%, #ec4899); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+  .header .brand span { -webkit-text-fill-color: transparent; }
+  .header .hi { letter-spacing: 2px; }
+  @supports ((-webkit-backdrop-filter: blur(14px)) or (backdrop-filter: blur(14px))) {
+    .card, .nav-inner, .sheet, .icon-btn, .seg, .pill, .month-nav button {
+      background: rgba(255,255,255,.66);
+      -webkit-backdrop-filter: blur(16px) saturate(170%);
+      backdrop-filter: blur(16px) saturate(170%);
+    }
+    body.dark .card, body.dark .nav-inner, body.dark .sheet, body.dark .icon-btn, body.dark .seg, body.dark .pill, body.dark .month-nav button {
+      background: rgba(24,27,38,.62);
+    }
+  }
+  .card { border: 1px solid rgba(255,255,255,.65); }
+  body.dark .card { border-color: rgba(255,255,255,.06); }
+  .balance { background: linear-gradient(135deg, #6366f1 0%, #7c3aed 45%, #a855f7 100%); box-shadow: 0 18px 40px rgba(124,58,237,.38); }
+  .btn { background: linear-gradient(135deg, #6366f1, #a855f7); box-shadow: 0 10px 22px rgba(124,58,237,.34); }
+  .fab { background: linear-gradient(135deg, #6366f1, #a855f7); box-shadow: 0 12px 26px rgba(124,58,237,.48); }
+  .seg button.on { background: linear-gradient(135deg, #6366f1, #8b5cf6); }
+  .nav button.tab.on { color: #7c3aed; }
+  .ind { background: linear-gradient(90deg, #6366f1, #a855f7); }
+
+  /* AI 助手美化 */
+  .ai-chat { max-height: 380px; }
+  .ai-msg { box-shadow: 0 4px 14px rgba(30,35,70,.07); }
+  .ai-msg.user { background: linear-gradient(135deg, #6366f1, #a855f7); box-shadow: 0 8px 20px rgba(124,58,237,.32); }
+  .ai-msg.ai { background: rgba(255,255,255,.7); }
+  body.dark .ai-msg.ai { background: rgba(32,36,50,.7); }
+  .ai-balance-bar { background: linear-gradient(135deg, rgba(99,102,241,.10), rgba(168,85,247,.10)); border: 1px solid rgba(124,58,237,.22); border-radius: 14px; }
+  .ai-balance-bar .b-ico { background: linear-gradient(135deg, #10b981, #0ea5e9); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; font-weight: 900; }
+  .ai-balance-bar .b-body { flex: 1; min-width: 0; }
+  .ai-balance-bar .b-txt { font-weight: 600; }
+  .ai-balance-bar .b-sub { font-size: 11px; color: var(--muted); margin-top: 1px; }
+  .ai-balance-bar .b-refresh { color: #7c3aed; font-weight: 700; }
+  .ai-bar .btn { width: auto; padding: 11px 24px; flex-shrink: 0; border-radius: 13px; }
+  .ai-row textarea { border-radius: 14px; background: rgba(255,255,255,.6); }
+  body.dark .ai-row textarea { background: rgba(32,36,50,.6); }
+  .toast { background: linear-gradient(135deg, #1f2333, #2a1f45); box-shadow: 0 10px 28px rgba(0,0,0,.25); }
 </style>
 </head>
 <body>
@@ -320,7 +375,14 @@
 
     <div class="sec"><h3>AI 理财助手 · DeepSeek</h3><span class="link" onclick="openAiSettings()">设置密钥</span></div>
     <div class="card pad" id="finAI">
-      <div class="ai-balance-bar"><span class="b-ico">¥</span><span class="b-txt" id="finAiBalanceText">余额加载中…</span><button class="b-refresh" onclick="queryAiBalance()">刷新</button></div>
+      <div class="ai-balance-bar">
+        <span class="b-ico">¥</span>
+        <div class="b-body">
+          <div class="b-txt" id="finAiBalanceText">余额加载中…</div>
+          <div class="b-sub" id="finAiTokenText">累计消耗 0 tokens</div>
+        </div>
+        <button class="b-refresh" onclick="queryAiBalance()">刷新</button>
+      </div>
       <div class="ai-chat" id="aiChat"><div class="ai-empty">先在右上角「设置密钥」填入 DeepSeek API Key，然后输入你的理财问题（如：结合当前行情，现在该开始定投吗？），AI 会结合你的账本与最新行情给出明确建议。</div></div>
       <div class="ai-row"><textarea id="aiInput" rows="2" placeholder="输入你的理财问题…"></textarea></div>
       <div class="ai-bar">
@@ -514,10 +576,15 @@
       <option value="deepseek-reasoner">deepseek-reasoner（深度思考，更慢但更细致）</option>
     </select>
   </div>
+  <div class="field">
+    <label>长期记忆（选填，AI 每次对话都会记住）</label>
+    <textarea id="aiMemo" rows="3" placeholder="例如：我是保守型投资者，可用资金 5 万，目标 3 年稳健增值，风险承受能力较低…"></textarea>
+  </div>
   <div class="muted f12" style="line-height:1.7;margin-bottom:8px;">
-    Key 只保存在本机浏览器本地（localStorage），不会写入页面源码、不会上传到别处。请前往 <b>platform.deepseek.com</b> 注册并创建 API Key（按量计费，约 ¥1/百万 token）。
+    Key 只保存在本机浏览器本地（localStorage），不会写入页面源码、不会上传到别处。请前往 <b>platform.deepseek.com</b> 注册并创建 API Key（按量计费，约 ¥1/百万 token）。AI 会记住最近的对话与你的长期记忆，回答更连贯。
   </div>
   <div class="ai-balance" id="aiBalance">尚未查询余额</div>
+  <div class="ai-balance" id="aiToken">累计已用 tokens：0</div>
   <div class="btn-row">
     <button class="btn ghost" onclick="queryAiBalance()">查询余额</button>
     <button class="btn" onclick="saveAiSettings()">保存</button>
@@ -1359,6 +1426,7 @@
   // ---------- AI 理财助手 ----------
   const AI_URL='https://api.deepseek.com/chat/completions';
   const AI_KEY_STORE='fin_ai_key', AI_MODEL_STORE='fin_ai_model', AI_LOG='fin_ai_log', AI_BALANCE_STORE='fin_ai_balance';
+  const AI_MEMORY_STORE='fin_ai_memory', AI_TOKEN_STORE='fin_ai_tokens';
   let aiLog = [];
   try{ aiLog = JSON.parse(localStorage.getItem(AI_LOG)||'[]'); }catch(e){ aiLog = []; }
   function aiStoreGet(k){ try{ return localStorage.getItem(k)||''; }catch(e){ return ''; } }
@@ -1367,16 +1435,21 @@
     document.getElementById('aiKey').value = aiStoreGet(AI_KEY_STORE);
     const sel=document.getElementById('aiModel');
     sel.value = (aiStoreGet(AI_MODEL_STORE)==='deepseek-reasoner')?'deepseek-reasoner':'deepseek-chat';
+    const memo=document.getElementById('aiMemo');
+    if(memo) memo.value = aiStoreGet(AI_MEMORY_STORE);
+    renderAiUsage();
     show('ovlAi','sheetAi');
   }
   function closeAiSettings(){ hide('ovlAi','sheetAi'); }
   function saveAiSettings(){
     aiStoreSet(AI_KEY_STORE, document.getElementById('aiKey').value.trim());
     aiStoreSet(AI_MODEL_STORE, document.getElementById('aiModel').value);
+    const memo=document.getElementById('aiMemo');
+    if(memo) aiStoreSet(AI_MEMORY_STORE, memo.value.trim());
     closeAiSettings();
     renderAiLog();
     queryAiBalance();
-    toast('API Key 已保存');
+    toast('已保存设置');
   }
   function fmtBalanceText(d){
     const info=(d && d.balance_infos && d.balance_infos[0])||{};
@@ -1416,6 +1489,13 @@
     const e2=document.getElementById('finAiBalanceText'); if(e2) e2.textContent=txt;
     const e1=document.getElementById('aiBalance'); if(e1) e1.textContent=cached||'尚未查询余额';
   }
+  function aiTokenTotal(){ return Number(aiStoreGet(AI_TOKEN_STORE))||0; }
+  function fmtInt(n){ return (Number(n)||0).toLocaleString('zh-CN'); }
+  function renderAiUsage(){
+    const total=aiTokenTotal();
+    const t1=document.getElementById('finAiTokenText'); if(t1) t1.textContent='累计消耗 '+fmtInt(total)+' tokens';
+    const t2=document.getElementById('aiToken'); if(t2) t2.textContent='累计已用 tokens：'+fmtInt(total);
+  }
   function txtOf(id){ const el=document.getElementById(id); return el? el.innerText.replace(/\s+/g,' ').trim().slice(0,900) : ''; }
   function buildAiContext(){
     const bal=totalBalance(), ms=monthStats(thisMonth());
@@ -1445,10 +1525,19 @@
     aiAppend('user', q);
     aiAppend('ai', '思考中…');
     const model=aiStoreGet(AI_MODEL_STORE)||'deepseek-chat';
-    const sys='你是专业的理财顾问与投资分析助手。请结合用户提供的账本与行情数据，用简体中文给出明确、具体、可执行的分析与建议，并在涉及投资时明确提示风险（不构成任何收益保证）。数据不足时，直接指出需要用户补充什么。';
+    let sys='你是专业的理财顾问与投资分析助手。请结合用户提供的账本与行情数据，用简体中文给出明确、具体、可执行的分析与建议，并在涉及投资时明确提示风险（不构成任何收益保证）。数据不足时，直接指出需要用户补充什么。请紧扣前面的对话保持连贯，避免重复已经说过的内容。';
+    const memo=aiStoreGet(AI_MEMORY_STORE).trim();
+    if(memo) sys += '\n\n【用户的长期记忆】'+memo+'\n请在相关回答中始终参考以上信息，保持对这个用户的持续了解。';
     const withCtx=document.getElementById('aiCtx') && document.getElementById('aiCtx').checked;
-    const userContent=withCtx ? (q+'\n\n'+buildAiContext()) : q;
-    const body={ model, stream:false, messages:[{role:'system',content:sys},{role:'user',content:userContent}] };
+    const cur = withCtx ? (q+'\n\n'+buildAiContext()) : q;
+    const messages=[{role:'system',content:sys}];
+    // 多轮上下文：带上最近 16 条历史（去掉刚占位的"思考中…"）
+    aiLog.slice(0,-2).slice(-16).forEach(function(m){
+      if(m.content==='思考中…') return;
+      messages.push({role: m.role==='user'?'user':'assistant', content: m.content});
+    });
+    messages.push({role:'user', content: cur});
+    const body={ model, stream:false, messages };
     if(model==='deepseek-chat') body.temperature=0.7;
     try{
       const res=await fetch(AI_URL,{
@@ -1466,6 +1555,13 @@
       aiLog[aiLog.length-1]={role:'ai', content: ans || '（未返回内容）'};
       aiStoreSet(AI_LOG, JSON.stringify(aiLog));
       renderAiLog();
+      // token 用量统计（累计）
+      const u=(data && data.usage)||{};
+      const tok=Number(u.total_tokens)||0;
+      if(tok>0){
+        aiStoreSet(AI_TOKEN_STORE, String(aiTokenTotal()+tok));
+        renderAiUsage();
+      }
     }catch(e){
       aiLog[aiLog.length-1]={role:'ai', content:'请求失败：'+e.message+'。请检查网络或 API Key 是否正确。'};
       aiStoreSet(AI_LOG, JSON.stringify(aiLog));
@@ -1478,6 +1574,7 @@
   render();
   renderAiLog();
   renderAiBalance();
+  renderAiUsage();
 
   // expose for inline onclick
   window.switchView=switchView; window.openRecord=openRecord; window.openEdit=openEdit; window.saveRecord=saveRecord; window.delRecord=delRecord;
