@@ -10,8 +10,8 @@
 
 ### 1. 克隆代码
 ```bash
-git clone <仓库地址>
-cd <项目目录>
+git clone https://github.com/babawang1234/ledger-app.git
+cd ledger-app
 ```
 
 ### 2. 安装依赖
