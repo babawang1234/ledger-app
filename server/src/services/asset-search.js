@@ -175,11 +175,11 @@ export async function searchAssetImages({ query, originalQuery, orientation, per
     message: unique.length ? '' : authFailures.length
       ? `${authFailures.map((failure) => `${failure.provider} 返回 HTTP ${failure.status}，请检查图库 API Key`).join('；')}。`
       : keyMissing && networkFailures.some((failure) => failure.provider === 'openverse')
-        ? 'Openverse 在当前服务端连接超时；已改用本地图库池返回结果。配置 Pexels / Unsplash Key 可获得更丰富的搜索覆盖。'
+        ? 'Openverse 在当前服务端连接超时，且本地图库暂无「该主题」的图片。配置 Pexels / Unsplash Key 可获得任意关键词的实时搜索覆盖。'
         : networkFailures.length
           ? `图库服务连接失败：${[...new Set(networkFailures.map((failure) => failure.provider))].join('、')}。请检查服务端网络或代理设置后重试。`
           : keyMissing
-            ? '图库没有返回匹配图片；Pexels / Unsplash API Key 可扩大摄影素材覆盖。'
+            ? '本地图库暂无「该主题」的图片。配置 Pexels / Unsplash API Key 后可按任意关键词实时搜索摄影素材。'
             : '图库已连接，但没有返回相关图片；可改用更具体的主体词搜索。',
   }
   cache.set(cacheKey, { at: Date.now(), value })
