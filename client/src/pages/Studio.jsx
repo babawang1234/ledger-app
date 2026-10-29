@@ -111,6 +111,11 @@ export default function Studio() {
   const [stockAsset, setStockAsset] = useState(null)
   const [searchingStock, setSearchingStock] = useState(false)
   const [stockSearchMessage, setStockSearchMessage] = useState('')
+  // 双链路：sourceTab = 'gallery'（图库检索）| 'ai'（AI 生成底图）
+  const [sourceTab, setSourceTab] = useState('gallery')
+  const [aiImages, setAiImages] = useState([])
+  const [generatingAi, setGeneratingAi] = useState(false)
+  const [aiMessage, setAiMessage] = useState('')
 
   // step3
   const [content, setContent] = useState({
@@ -587,6 +592,28 @@ export default function Studio() {
     }
   }
 
+  /** AI 生成底图链路：关键词 → 万相文生图 → 返回可选的底图 */
+  async function generateAiBackground(query = stockQuery, { silent = false } = {}) {
+    const q = String(query || '').trim()
+    if (!q) { setAiMessage('先输入关键词，AI 才能生成对应底图。'); return [] }
+    setGeneratingAi(true)
+    setAiMessage('AI 正在理解关键词并生成底图，约需 20-40 秒…')
+    try {
+      const ratio = '9:16'
+      const data = await api.post('/inspire/ai-background', { keyword: q, ratio, count: 3 })
+      setAiImages(data.images || [])
+      setAiMessage(data.images?.length ? '' : (data.message || 'AI 暂未返回结果，请重试。'))
+      if (data.images?.length) setStockAsset(data.images[0])
+      return data.images || []
+    } catch (e) {
+      if (!silent) toast.error(e.message)
+      setAiMessage(e.message || 'AI 生成失败')
+      return []
+    } finally {
+      setGeneratingAi(false)
+    }
+  }
+
   async function pickLayout(layout) {
     setSelectedLayout(layout)
     const withIds = layout.layers.map((l, i) => ({ ...l, id: `layer-${i}` }))
@@ -770,61 +797,111 @@ export default function Studio() {
 
           {brief && !interpreting && (
             <div className="mt-6 overflow-hidden rounded-2xl bg-[#f5f5f5] text-[#111] shadow-[0_0_0_1px_rgba(0,0,0,0.04),0_10px_40px_rgba(0,0,0,0.25)]">
-              {/* 视觉素材检索：瀑布流只放真实图库图片 */}
+              {/* 视觉素材检索：双链路（图库检索 + AI 生成） */}
               <div className="bg-white px-5 py-5 sm:px-8">
-                <h2 className="text-lg font-semibold">先找对主视觉素材</h2>
-                <p className="mt-1 text-xs text-[#888]">按你描述的具体主体搜索实景图片；不会拿不相关的模板填充结果。</p>
-                <div className="flex flex-wrap items-center gap-3">
+                <div className="flex items-center justify-between gap-3">
+                  <h2 className="text-lg font-semibold">先找对主视觉素材</h2>
+                  {/* 双链路 Tab */}
+                  <div className="flex shrink-0 items-center rounded-full bg-[#f0f0f0] p-1">
+                    <button onClick={() => setSourceTab('gallery')} className={`rounded-full px-4 py-1.5 text-sm font-medium transition ${sourceTab === 'gallery' ? 'bg-white text-[#111] shadow-sm' : 'text-[#666] hover:text-[#333]'}`}>图库检索</button>
+                    <button onClick={() => setSourceTab('ai')} className={`rounded-full px-4 py-1.5 text-sm font-medium transition ${sourceTab === 'ai' ? 'bg-white text-[#111] shadow-sm' : 'text-[#666] hover:text-[#333]'}`}>AI 生成底图</button>
+                  </div>
+                </div>
+                <p className="mt-1 text-xs text-[#888]">
+                  {sourceTab === 'gallery' ? '按你描述的具体主体搜索实景图片；不会拿不相关的模板填充结果。' : 'AI 读懂关键词后直接生成贴题的海报底图；生成后再进入排版。'}
+                </p>
+                <div className="mt-3 flex flex-wrap items-center gap-3">
                   <div className="flex flex-1 items-center gap-2">
                     <svg className="h-5 w-5 shrink-0 text-[#999]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="7" /><path d="m21 21-4.3-4.3" /></svg>
                     <input
                       value={stockQuery}
                       onChange={(e) => setStockQuery(e.target.value)}
-                      onKeyDown={(e) => e.key === 'Enter' && searchStockPhotos(stockQuery, description)}
-                      placeholder="搜索具体主体，例如：龙井茶叶、透明玻璃茶杯、清晨茶园…"
-                      aria-label="按需求搜索真实图片素材"
+                      onKeyDown={(e) => {
+                        if (e.key !== 'Enter') return
+                        sourceTab === 'gallery' ? searchStockPhotos(stockQuery, description) : generateAiBackground(stockQuery)
+                      }}
+                      placeholder={sourceTab === 'gallery' ? '搜索具体主体，例如：龙井茶叶、透明玻璃茶杯、清晨茶园…' : '描述你想要的底图，例如：温暖的咖啡店、清晨的茶园…'}
+                      aria-label="按需求获取主视觉素材"
                       className="w-full bg-transparent text-[15px] text-[#333] placeholder-[#bbb] outline-none"
                     />
                     {stockQuery && (
-                      <button onClick={() => { setStockQuery(''); setStockPhotos([]); setStockSearchMessage('') }} className="shrink-0 text-[#bbb] hover:text-[#666]">✕</button>
+                      <button onClick={() => { setStockQuery(''); setStockPhotos([]); setAiImages([]); setStockSearchMessage(''); setAiMessage('') }} className="shrink-0 text-[#bbb] hover:text-[#666]">✕</button>
                     )}
                   </div>
                   <div className="flex shrink-0 items-center gap-2">
-                    <button onClick={() => searchStockPhotos(stockQuery, description)} disabled={searchingStock || !stockQuery.trim()} className="rounded-full bg-[#222] px-5 py-2 text-sm font-medium text-white transition hover:bg-[#333] disabled:opacity-50">
-                      {searchingStock ? '搜索中…' : '搜索图片素材'}
-                    </button>
+                    {sourceTab === 'gallery' ? (
+                      <button onClick={() => searchStockPhotos(stockQuery, description)} disabled={searchingStock || !stockQuery.trim()} className="rounded-full bg-[#222] px-5 py-2 text-sm font-medium text-white transition hover:bg-[#333] disabled:opacity-50">
+                        {searchingStock ? '搜索中…' : '搜索图片素材'}
+                      </button>
+                    ) : (
+                      <button onClick={() => generateAiBackground(stockQuery)} disabled={generatingAi || !stockQuery.trim()} className="rounded-full bg-[#e8443a] px-5 py-2 text-sm font-medium text-white transition hover:bg-[#d93a30] disabled:opacity-50">
+                        {generatingAi ? 'AI 生成中…' : 'AI 生成底图'}
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>
 
-              {/* 瀑布流主体：只呈现图库返回的真实图片及来源 */}
+              {/* 瀑布流主体：根据当前 Tab 呈现图库或 AI 生成结果 */}
               <div className="px-5 pb-8 pt-2 sm:px-8">
                 <div className="flex items-center justify-between pb-3">
-                  <span className="text-xs text-[#999]">{stockPhotos.length ? `找到 ${stockPhotos.length} 张相关实景图片` : '等待搜索结果'}</span>
+                  <span className="text-xs text-[#999]">
+                    {sourceTab === 'gallery'
+                      ? (stockPhotos.length ? `找到 ${stockPhotos.length} 张相关实景图片` : '等待搜索结果')
+                      : (aiImages.length ? `AI 生成了 ${aiImages.length} 张底图` : '等待 AI 生成')}
+                  </span>
                   <span className="text-xs text-[#bbb]">点击图片设为海报主视觉</span>
                 </div>
-                {searchingStock ? (
-                  <div className="columns-2 gap-4 sm:columns-3 lg:columns-4 xl:columns-5 [&>*]:mb-4">
-                    {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9].map((i) => <div key={i} className="rounded bg-[#e8e8e8]" style={{ height: `${140 + (i % 4) * 60}px` }} />)}
-                  </div>
-                ) : stockPhotos.length === 0 ? (
-                  <div className="rounded-lg border border-dashed border-[#ddd] bg-white p-10 text-center">
-                    <p className="text-sm text-[#666]">{stockSearchMessage || '输入需求并点击“搜索图片素材”，先找到适合的背景图片。'}</p>
-                    <p className="mt-2 text-xs text-[#999]">若图库暂时没有结果，可换更具体的主体词；搜索服务需要服务端可访问图库。</p>
-                  </div>
+
+                {sourceTab === 'gallery' ? (
+                  searchingStock ? (
+                    <div className="columns-2 gap-4 sm:columns-3 lg:columns-4 xl:columns-5 [&>*]:mb-4">
+                      {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9].map((i) => <div key={i} className="rounded bg-[#e8e8e8]" style={{ height: `${140 + (i % 4) * 60}px` }} />)}
+                    </div>
+                  ) : stockPhotos.length === 0 ? (
+                    <div className="rounded-lg border border-dashed border-[#ddd] bg-white p-10 text-center">
+                      <p className="text-sm text-[#666]">{stockSearchMessage || '输入需求并点击“搜索图片素材”，先找到适合的背景图片。'}</p>
+                      <p className="mt-2 text-xs text-[#999]">若图库暂时没有结果，可换更具体的主体词，或切换到「AI 生成底图」。</p>
+                    </div>
+                  ) : (
+                    <div className="columns-2 gap-4 sm:columns-3 lg:columns-4 xl:columns-5 [&>*]:mb-4 [&>*]:break-inside-avoid">
+                      {stockPhotos.map((photo) => (
+                        <article key={`${photo.provider}:${photo.id}`} className={`group overflow-hidden rounded-lg bg-white ${stockAsset?.id === photo.id ? 'ring-2 ring-[#e8443a]' : ''}`}>
+                          <button onClick={() => chooseStockPhoto(photo)} className="block w-full text-left">
+                            <img src={photo.thumb} alt={photo.description} loading="lazy" className="w-full object-cover transition duration-300 group-hover:brightness-95" />
+                            <span className="block truncate px-2.5 pt-2 text-xs text-[#444]">{photo.description}</span>
+                            <span className="block truncate px-2.5 pb-2 text-[11px] text-[#888]">{photo.photographer} · {photo.license || '开放许可'}</span>
+                          </button>
+                          <a className="block border-t border-[#eee] px-2.5 py-2 text-[11px] text-[#e8443a]" href={photo.sourceUrl} target="_blank" rel="noreferrer">查看 {photo.sourceName} 来源 ↗</a>
+                        </article>
+                      ))}
+                    </div>
+                  )
                 ) : (
-                  <div className="columns-2 gap-4 sm:columns-3 lg:columns-4 xl:columns-5 [&>*]:mb-4 [&>*]:break-inside-avoid">
-                    {stockPhotos.map((photo) => (
-                      <article key={`${photo.provider}:${photo.id}`} className={`group overflow-hidden rounded-lg bg-white ${stockAsset?.id === photo.id ? 'ring-2 ring-[#e8443a]' : ''}`}>
-                        <button onClick={() => chooseStockPhoto(photo)} className="block w-full text-left">
-                          <img src={photo.thumb} alt={photo.description} loading="lazy" className="w-full object-cover transition duration-300 group-hover:brightness-95" />
-                          <span className="block truncate px-2.5 pt-2 text-xs text-[#444]">{photo.description}</span>
-                          <span className="block truncate px-2.5 pb-2 text-[11px] text-[#888]">{photo.photographer} · {photo.license || '开放许可'}</span>
-                        </button>
-                        <a className="block border-t border-[#eee] px-2.5 py-2 text-[11px] text-[#e8443a]" href={photo.sourceUrl} target="_blank" rel="noreferrer">查看 {photo.sourceName} 来源 ↗</a>
-                      </article>
-                    ))}
-                  </div>
+                  generatingAi ? (
+                    <div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-[#ddd] bg-white py-16 text-center">
+                      <div className="h-8 w-8 animate-spin rounded-full border-2 border-[#e8443a] border-t-transparent" />
+                      <p className="mt-4 text-sm text-[#666]">{aiMessage || 'AI 正在生成底图，约需 20-40 秒…'}</p>
+                      <p className="mt-1 text-xs text-[#999]">正在调用图像生成模型，请稍候</p>
+                    </div>
+                  ) : aiImages.length === 0 ? (
+                    <div className="rounded-lg border border-dashed border-[#ddd] bg-white p-10 text-center">
+                      <p className="text-sm text-[#666]">{aiMessage || '输入关键词后点击「AI 生成底图」，AI 会读懂关键词并生成贴题的海报背景。'}</p>
+                      <p className="mt-2 text-xs text-[#999]">AI 生成需配置图像模型 Key（阿里云百炼）；未配置时可先用「图库检索」。</p>
+                    </div>
+                  ) : (
+                    <div className="columns-2 gap-4 sm:columns-3 lg:columns-4 xl:columns-5 [&>*]:mb-4 [&>*]:break-inside-avoid">
+                      {aiImages.map((img) => (
+                        <article key={img.id} className={`group overflow-hidden rounded-lg bg-white ${stockAsset?.id === img.id ? 'ring-2 ring-[#e8443a]' : ''}`}>
+                          <button onClick={() => { setStockAsset(img); toast.success('已选择 AI 生成底图') }} className="block w-full text-left">
+                            <img src={img.url} alt={img.description} loading="lazy" className="w-full object-cover transition duration-300 group-hover:brightness-95" />
+                            <span className="block truncate px-2.5 pt-2 text-xs text-[#444]">{img.description}</span>
+                            <span className="block truncate px-2.5 pb-2 text-[11px] text-[#888]">AI 生成 · 可商用</span>
+                          </button>
+                        </article>
+                      ))}
+                    </div>
+                  )
                 )}
 
                 <button onClick={continueFromBrief} disabled={!stockAsset} className="mt-4 w-full rounded-lg border border-[#e0e0e0] bg-white py-2.5 text-sm text-[#666] transition hover:border-[#ccc] hover:text-[#333] disabled:cursor-not-allowed disabled:opacity-45">

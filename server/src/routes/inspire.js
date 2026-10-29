@@ -4,6 +4,11 @@ import { asyncHandler } from '../lib/http.js'
 import { db } from '../lib/db.js'
 import { draftCopy, parseBrief, scoreTemplates } from '../skills/poster/interpret.js'
 import { autoRoute, invoke } from '../adapters/index.js'
+import path from 'path'
+import fs from 'fs'
+import { fileURLToPath } from 'url'
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
 const router = Router()
 router.use(authRequired)
@@ -147,6 +152,70 @@ router.post(
         ? fallback.concepts[0].query
         : ai?.imageSearchQuery || [fallback.subject, ...(fallback.keywords || [])].filter(Boolean).join(' ') || description).slice(0, 160),
       templates: recommendations,
+    })
+  })
+)
+
+/**
+ * AI 生成海报底图（双链路之一）
+ * 输入关键词 → 万相文生图 → 下载到本地 → 返回可选的底图 URL 列表。
+ * 未配置 DASHSCOPE_API_KEY 时返回明确提示（前端据此展示引导）。
+ */
+router.post(
+  '/ai-background',
+  asyncHandler(async (req, res) => {
+    const keyword = String(req.body?.keyword || '').trim().slice(0, 100)
+    const count = Math.min(3, Math.max(1, Number(req.body?.count) || 3))
+    if (!keyword) return res.status(400).json({ error: 'EMPTY_KEYWORD', message: '请提供关键词' })
+
+    const { WanxAdapter } = await import('../adapters/wanx.js')
+    const wanx = new WanxAdapter()
+    if (!wanx.available) {
+      return res.status(503).json({
+        error: 'NO_AI_KEY',
+        images: [],
+        message: '未配置 AI 图像生成 Key（DASHSCOPE_API_KEY）。请在 server/.env 配置阿里云百炼 Key 后重启后端。',
+      })
+    }
+
+    const aiImgDir = path.resolve(__dirname, '../../public/ai-images')
+    fs.mkdirSync(aiImgDir, { recursive: true })
+
+    const images = []
+    const prompts = [
+      `${keyword}主题海报背景图，高级设计感，构图留白充足便于叠加标题，色彩协调，专业平面设计，高清，无文字无字母无logo，竖版构图`,
+      `${keyword}创意视觉背景，抽象艺术与主题融合，大气留白，现代简约风，高清，无文字无水印，竖版`,
+      `${keyword}氛围场景背景，质感光影，主题突出，适合海报留白排版，专业设计感，高清，无文字，竖版`,
+    ]
+
+    for (let i = 0; i < count; i++) {
+      try {
+        const prompt = prompts[i % prompts.length]
+        const { url } = await wanx.generateImage({ prompt, width: 1080, height: 1920 })
+        // 下载到本地，避免万相 24h URL 过期
+        const filename = `ai-${Date.now()}-${i}.png`
+        const res2 = await fetch(url, { signal: AbortSignal.timeout(30000) })
+        if (!res2.ok) throw new Error(`下载 AI 图失败 HTTP ${res2.status}`)
+        const bytes = Buffer.from(await res2.arrayBuffer())
+        fs.writeFileSync(path.join(aiImgDir, filename), bytes)
+        images.push({
+          id: `ai-${Date.now()}-${i}`,
+          provider: 'ai',
+          sourceName: 'AI 生成',
+          url: `/ai-images/${filename}`,
+          thumb: `/ai-images/${filename}`,
+          description: `${keyword} · AI 生成底图 ${i + 1}`,
+          photographer: 'AI 生成',
+          license: 'AI 生成 · 可商用',
+        })
+      } catch (e) {
+        console.warn(`[inspire] AI 生成第 ${i + 1} 张失败：${e.message}`)
+      }
+    }
+
+    res.json({
+      images,
+      message: images.length ? '' : 'AI 生成暂时失败，可稍后重试或切换「图库检索」链路。',
     })
   })
 )
