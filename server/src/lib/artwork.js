@@ -98,9 +98,9 @@ function visualSvg(scene, colors, variant) {
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1200" preserveAspectRatio="xMidYMid meet">${common}${scenes[scene] || scenes.stage}</svg>`
 }
 
-export function createArtworkDataUrl({ palette, purpose, content, variant = 0 }) {
+export function createArtworkDataUrl({ palette, purpose, content, variant = 0, scene }) {
   const colors = [0, 1, 2].map((i) => safeColor(palette?.[i], DEFAULT_PALETTE[i]))
-  const scene = sceneFor(purpose, content)
-  const svg = visualSvg(scene, colors, variant)
+  const chosenScene = scene || sceneFor(purpose, content)
+  const svg = visualSvg(chosenScene, colors, variant)
   return `data:image/svg+xml;base64,${Buffer.from(svg).toString('base64')}`
 }
