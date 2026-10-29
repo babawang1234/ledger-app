@@ -28,6 +28,14 @@ export default defineConfig({
         target: 'http://localhost:4000',
         changeOrigin: true,
       },
+      '/design-backdrops/': {
+        target: 'http://localhost:4000',
+        changeOrigin: true,
+      },
+      '/ai-images/': {
+        target: 'http://localhost:4000',
+        changeOrigin: true,
+      },
     },
   },
 })

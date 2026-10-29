@@ -172,12 +172,32 @@ router.post(
     const { WanxAdapter } = await import('../adapters/wanx.js')
     const wanx = new WanxAdapter()
     if (!wanx.available) {
-      // 无万相 Key 时降级为本地图库池匹配，返回真实贴图底图（而非报错）
-      const localImgs = searchLocalPool(keyword, { limit: count }).map(toPhoto)
+      // 无万相 Key 时，用本地设计底图引擎按关键词生成"虚拟设计背景"（而非返回摄影图）
+      const { generateDesignBackdrops } = await import('../lib/design-backdrop.js')
+      const dir = path.resolve(__dirname, '../../public/design-backdrops')
+      fs.mkdirSync(dir, { recursive: true })
+      const backdrops = generateDesignBackdrops(keyword, { count: Math.max(count, 4) })
+      const images = backdrops.map((b) => {
+        const filename = `ai-db-${Date.now()}-${b.variant}.png`
+        fs.writeFileSync(path.join(dir, filename), b.buffer)
+        return {
+          id: b.id,
+          provider: 'ai-design',
+          sourceName: 'AI 设计底图',
+          description: `${keyword} · AI 设计背景 ${b.variant + 1}`,
+          url: `/design-backdrops/${filename}`,
+          thumb: `/design-backdrops/${filename}`,
+          photographer: '幻象工坊 · AI 设计',
+          license: 'AI 设计底图 · 可商用',
+          kind: 'design',
+          width: b.width,
+          height: b.height,
+        }
+      })
       return res.json({
-        images: localImgs,
-        fallback: 'local',
-        message: localImgs.length ? '' : '未配置 AI 图像生成 Key，且本地图库暂无匹配，请换更具体的关键词。',
+        images,
+        fallback: 'local-design',
+        message: images.length ? '' : '设计底图生成失败，请换关键词重试。',
       })
     }
 

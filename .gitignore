@@ -14,6 +14,12 @@ server/exports/*
 !server/uploads/.gitkeep
 !server/exports/.gitkeep
 
+# 运行时生成的设计底图/AI图片（每次搜索/生成动态产出，不入库）
+server/public/design-backdrops/*
+server/public/ai-images/*
+!server/public/design-backdrops/.gitkeep
+!server/public/ai-images/.gitkeep
+
 # 环境变量（禁止提交真实密钥）
 .env
 .env.local

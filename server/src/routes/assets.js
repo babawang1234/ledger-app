@@ -3,6 +3,12 @@ import { authRequired } from '../middleware/auth.js'
 import { asyncHandler } from '../lib/http.js'
 import { config } from '../config/index.js'
 import { searchAssetImages } from '../services/asset-search.js'
+import { generateDesignBackdrops } from '../lib/design-backdrop.js'
+import path from 'path'
+import fs from 'fs'
+import { fileURLToPath } from 'url'
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
 const router = Router()
 router.use(authRequired)
@@ -24,7 +30,64 @@ router.get('/search', asyncHandler(async (req, res) => {
   const orientation = ['landscape', 'portrait', 'squarish'].includes(req.query.orientation) ? req.query.orientation : undefined
   const limit = Math.min(48, Math.max(12, Number(req.query.limit) || 36))
   const result = await searchAssetImages({ query, originalQuery, orientation, perPage: limit })
-  res.json(result)
+
+  // 生成"设计底图"（虚拟背景）：摄影图之外，再给用户提供设计感的抽象背景
+  let designBackdrops = []
+  try {
+    const dir = path.resolve(__dirname, '../../public/design-backdrops')
+    fs.mkdirSync(dir, { recursive: true })
+    const count = 6
+    const backdrops = generateDesignBackdrops(query, { count })
+    designBackdrops = backdrops.map((b) => {
+      const filename = `db-${Date.now()}-${b.variant}.png`
+      fs.writeFileSync(path.join(dir, filename), b.buffer)
+      return {
+        id: b.id,
+        provider: 'design',
+        sourceName: '设计底图',
+        description: b.description,
+        url: `/design-backdrops/${filename}`,
+        thumb: `/design-backdrops/${filename}`,
+        photographer: '幻象工坊 · 设计库',
+        license: '设计底图 · 可商用',
+        kind: 'design',
+        width: b.width,
+        height: b.height,
+      }
+    })
+  } catch (e) {
+    console.warn('[assets] 设计底图生成失败：', e.message)
+  }
+
+  res.json({ ...result, designBackdrops })
+}))
+
+// 单独获取"设计底图"（虚拟背景）——供「设计底图」Tab 使用
+router.get('/design-backdrops', asyncHandler(async (req, res) => {
+  const query = String(req.query.q || '').trim().slice(0, 100)
+  if (!query) return res.json({ backdrops: [] })
+  const count = Math.min(12, Math.max(4, Number(req.query.count) || 8))
+  const dir = path.resolve(__dirname, '../../public/design-backdrops')
+  fs.mkdirSync(dir, { recursive: true })
+  const backdrops = generateDesignBackdrops(query, { count })
+  const items = backdrops.map((b) => {
+    const filename = `db-${Date.now()}-${b.variant}.png`
+    fs.writeFileSync(path.join(dir, filename), b.buffer)
+    return {
+      id: b.id,
+      provider: 'design',
+      sourceName: '设计底图',
+      description: b.description,
+      url: `/design-backdrops/${filename}`,
+      thumb: `/design-backdrops/${filename}`,
+      photographer: '幻象工坊 · 设计库',
+      license: '设计底图 · 可商用',
+      kind: 'design',
+      width: b.width,
+      height: b.height,
+    }
+  })
+  res.json({ backdrops: items })
 }))
 
 // Required by Unsplash API guidelines when a user selects a photo for use.
