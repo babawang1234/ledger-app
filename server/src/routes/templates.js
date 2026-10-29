@@ -55,6 +55,21 @@ router.get(
   })
 )
 
+// 分类列表（供筛选栏）：返回分类名 + 计数 + 一张示例缩略图
+router.get(
+  '/categories',
+  asyncHandler(async (req, res) => {
+    const rows = db.prepare(`
+      SELECT category AS name, COUNT(*) AS count,
+        (SELECT thumbnail_path FROM templates t2 WHERE t2.category = templates.category ORDER BY featured DESC, id ASC LIMIT 1) AS cover
+      FROM templates
+      GROUP BY category
+      ORDER BY count DESC, name ASC
+    `).all()
+    res.json({ categories: rows })
+  })
+)
+
 // 关键词发现：花瓣网式检索——命中模板优先，不足时用推荐补齐；seed 控制换一换
 router.get(
   '/discover',
@@ -62,7 +77,8 @@ router.get(
     const raw = String(req.query.q || '').trim().slice(0, 120)
     const seed = Number(req.query.seed) || 0
     const exclude = String(req.query.exclude || '').split(',').filter(Boolean).slice(0, 40)
-    const limit = Math.min(Number(req.query.limit) || 12, 24)
+    const category = String(req.query.category || '').trim()
+    const limit = Math.min(Number(req.query.limit) || 12, 60)
 
     // 简易可复现随机（mulberry32）
     const rand = (() => {
@@ -75,7 +91,8 @@ router.get(
       }
     })()
 
-    const all = db.prepare('SELECT * FROM templates').all().filter((t) => !exclude.includes(t.id))
+    let all = db.prepare('SELECT * FROM templates').all().filter((t) => !exclude.includes(t.id))
+    if (category) all = all.filter((t) => t.category === category)
     const tokens = raw
       .replace(/[，,。.!！?？；;\n]/gu, ' ')
       .split(/\s+/)

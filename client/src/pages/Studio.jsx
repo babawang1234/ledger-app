@@ -79,6 +79,8 @@ export default function Studio() {
   const [discovering, setDiscovering] = useState(false)
   const [discoverSeed, setDiscoverSeed] = useState(1)
   const [discoverMatched, setDiscoverMatched] = useState(0)
+  const [discoverCategory, setDiscoverCategory] = useState('')
+  const [categories, setCategories] = useState([])
 
   // step1
   const [name, setName] = useState('')
@@ -159,6 +161,7 @@ export default function Studio() {
 
   useEffect(() => {
     api.get('/generate/models').then((d) => setModels(d.models)).catch(() => {})
+    loadCategories()
     // 从首页/灵感库带入的预设参数
     const preset = location.state?.preset
     const incomingDescription = location.state?.description
@@ -256,8 +259,9 @@ export default function Studio() {
     setDiscoverQ(query)
     setDiscovering(true)
     try {
-      const params = new URLSearchParams({ seed: String(seed), limit: '12' })
+      const params = new URLSearchParams({ seed: String(seed), limit: '60' })
       if (query) params.set('q', query)
+      if (discoverCategory) params.set('category', discoverCategory)
       const d = await api.get(`/templates/discover?${params.toString()}`)
       setDiscoverList(d.templates || [])
       setDiscoverMatched(d.matched || 0)
@@ -268,6 +272,13 @@ export default function Studio() {
     } finally {
       setDiscovering(false)
     }
+  }
+
+  async function loadCategories() {
+    try {
+      const d = await api.get('/templates/categories')
+      setCategories(d.categories || [])
+    } catch { /* 忽略 */ }
   }
 
   async function interpretDescription(text = description) {
@@ -760,23 +771,28 @@ export default function Studio() {
           </div>
 
           {brief && !interpreting && (
-            <div className="card mt-6 p-8">
+            <div className="card mt-6 p-6 sm:p-8">
               <div className="flex flex-wrap items-end justify-between gap-3">
                 <div>
                   <h2 className="text-lg font-bold">挑一个模板开始</h2>
-                  <p className="mt-1 text-xs text-white/45">输入关键词找更多同类版式；所有模板进入工作台后都可重新排版、逐字编辑。</p>
+                  <p className="mt-1 text-xs text-white/45">输入关键词找同类版式，或点分类标签浏览；进入工作台后都可重新排版、逐字编辑。</p>
                 </div>
                 <span className="text-xs text-white/40">{discoverMatched > 0 ? `命中 ${discoverMatched} 个相关模板` : '为你推荐'}</span>
               </div>
+
+              {/* 搜索 + 换一换 */}
               <div className="mt-4 flex gap-2">
-                <input
-                  className="input"
-                  value={discoverQ}
-                  onChange={(e) => setDiscoverQ(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && discoverTemplates(discoverQ, Math.floor(Math.random() * 1e6))}
-                  placeholder="输入关键词找模板，例如：咖啡、促销、招聘、发布会…"
-                  aria-label="按关键词搜索模板"
-                />
+                <div className="relative flex-1">
+                  <svg className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/35" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="7" /><path d="m21 21-4.3-4.3" /></svg>
+                  <input
+                    className="input pl-9"
+                    value={discoverQ}
+                    onChange={(e) => setDiscoverQ(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && discoverTemplates(discoverQ, Math.floor(Math.random() * 1e6))}
+                    placeholder="搜索海报灵感，例如：咖啡、促销、招聘、发布会、环保…"
+                    aria-label="按关键词搜索模板"
+                  />
+                </div>
                 <button onClick={() => discoverTemplates(discoverQ, Math.floor(Math.random() * 1e6))} disabled={discovering} className="btn-ghost shrink-0 text-sm">
                   {discovering ? '搜索中…' : '搜索'}
                 </button>
@@ -785,27 +801,51 @@ export default function Studio() {
                 </button>
               </div>
 
+              {/* 分类筛选栏（图文标签，可横滑） */}
+              {categories.length > 0 && (
+                <div className="scrollbar-thin -mx-6 mt-4 flex gap-3 overflow-x-auto px-6 pb-1 sm:-mx-8 sm:px-8">
+                  <button
+                    onClick={() => { setDiscoverCategory(''); discoverTemplates(discoverQ, Math.floor(Math.random() * 1e6)) }}
+                    className={`flex shrink-0 flex-col items-center gap-1.5 ${!discoverCategory ? '' : 'opacity-60'}`}
+                  >
+                    <span className={`flex h-14 w-14 items-center justify-center rounded-xl border text-xs font-semibold transition ${!discoverCategory ? 'border-brand-violet bg-brand-violet/15 text-brand-violet' : 'border-white/10 bg-white/5 text-white/55 hover:bg-white/10'}`}>全部</span>
+                  </button>
+                  {categories.map((c) => (
+                    <button
+                      key={c.name}
+                      onClick={() => { setDiscoverCategory(c.name); discoverTemplates(discoverQ, Math.floor(Math.random() * 1e6)) }}
+                      className="group flex shrink-0 flex-col items-center gap-1.5"
+                    >
+                      <span className={`relative block h-14 w-14 overflow-hidden rounded-xl border transition ${discoverCategory === c.name ? 'border-brand-violet ring-1 ring-brand-violet/60' : 'border-white/10 hover:border-white/25'}`}>
+                        {c.cover ? (
+                          <img src={c.cover} alt={c.name} className="h-full w-full object-cover" />
+                        ) : (
+                          <span className="flex h-full w-full items-center justify-center bg-white/5 text-white/40">{c.name.slice(0, 1)}</span>
+                        )}
+                      </span>
+                      <span className={`text-xs ${discoverCategory === c.name ? 'font-semibold text-brand-violet' : 'text-white/50'}`}>{c.name}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+
               {discovering ? (
-                <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                  {[0, 1, 2, 3, 4, 5].map((i) => <div key={i} className="skeleton aspect-[3/4] rounded-xl" />)}
+                <div className="mt-5 columns-2 gap-4 sm:columns-3 lg:columns-4 xl:columns-5 [&>*]:mb-4">
+                  {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9].map((i) => <div key={i} className="skeleton rounded-lg" style={{ height: `${140 + (i % 4) * 60}px` }} />)}
                 </div>
               ) : discoverList.length === 0 ? (
                 <div className="mt-6 rounded-xl border border-dashed border-white/15 p-8 text-center">
                   <p className="text-sm text-white/50">换个关键词试试，或直接从零开始创作。</p>
                 </div>
               ) : (
-                <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                <div className="mt-5 columns-2 gap-4 sm:columns-3 lg:columns-4 xl:columns-5 [&>*]:mb-4 [&>*]:break-inside-avoid">
                   {discoverList.map((t) => (
-                    <div key={t.id} className="overflow-hidden rounded-xl border border-white/10 bg-white/[0.03] transition hover:border-brand-violet/50">
-                      <div className="relative">
-                        <img src={t.thumbnail_path || t.thumbnail} alt={t.name} loading="lazy" className="aspect-[3/4] w-full bg-ink-900 object-cover" />
-                        {t.badge && <span className="absolute left-2 top-2 rounded-full bg-black/55 px-2 py-0.5 text-[11px] text-white/85 backdrop-blur">{t.badge}</span>}
-                      </div>
-                      <div className="p-3.5">
-                        <p className="truncate text-sm font-semibold">{t.name}</p>
-                        <p className="mt-0.5 text-xs text-brand-cyan/80">{t.category} · {t.canvas?.width}×{t.canvas?.height}</p>
-                        <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-white/45">{t.designNotes?.composition || t.description}</p>
-                        <button onClick={() => useTemplate(t)} className="btn-primary mt-3 w-full text-sm">用这个模板</button>
+                    <div key={t.id} className="group relative overflow-hidden rounded-lg bg-white/[0.04]">
+                      <img src={t.thumbnail_path || t.thumbnail} alt={t.name} loading="lazy" className="w-full bg-ink-900 object-cover transition duration-300 group-hover:opacity-90" style={{ aspectRatio: t.canvas?.width && t.canvas?.height ? `${t.canvas.width}/${t.canvas.height}` : '3/4' }} />
+                      {/* 悬停操作层 */}
+                      <div className="pointer-events-none absolute inset-0 flex items-end justify-between gap-2 bg-gradient-to-t from-black/70 via-transparent to-transparent p-3 opacity-0 transition duration-200 group-hover:opacity-100">
+                        <span className="line-clamp-1 text-xs font-medium text-white">{t.name}</span>
+                        <button onClick={() => useTemplate(t)} className="pointer-events-auto shrink-0 rounded-full bg-brand-violet px-3 py-1 text-xs font-semibold text-white shadow-lg transition hover:bg-brand-violet/80">用这个模板</button>
                       </div>
                     </div>
                   ))}
