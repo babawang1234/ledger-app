@@ -1,0 +1,254 @@
+// 本地图库池：预置一批 Unsplash CDN 公开图片（无需 API Key、可商用、无需署名）
+// 用于在未配置 Pexels/Unsplash Key、且 Openverse 网络不可达时，作为图库检索的兜底数据源。
+// 图片来源：images.unsplash.com 公开 CDN 直链（Unsplash License，可免费商用）。
+// 每张图带 keywords（用于关键词匹配）和 category（分类）。
+
+const P = (id) => `https://images.unsplash.com/photo-${id}?w=800&q=80&fm=jpg&fit=crop`
+const PT = (id) => `https://images.unsplash.com/photo-${id}?w=400&q=75&fm=jpg&fit=crop`
+
+// 每条：{ id, category, label, keywords: [...], w, h }
+const POOL = [
+  // 咖啡 / 餐饮
+  { id: '1495474472287-4d71bcdd2085', category: '咖啡', label: '咖啡', keywords: ['咖啡', 'coffee', '饮品', '咖啡馆', '饮料'], w: 1600, h: 1067 },
+  { id: '1509042239860-f550ce710b93', category: '咖啡', label: '咖啡', keywords: ['咖啡', 'coffee', '饮品', '饮料'], w: 1600, h: 1067 },
+  { id: '1447933601403-0c6688de566e', category: '咖啡', label: '咖啡', keywords: ['咖啡', 'coffee', '饮品'], w: 1600, h: 1067 },
+  { id: '1504674900247-0877df9cc836', category: '美食', label: '美食', keywords: ['美食', '食物', '餐饮', '料理', '吃'], w: 1600, h: 1067 },
+  { id: '1512621776951-a57141f2eefd', category: '美食', label: '健康餐', keywords: ['美食', '健康', '沙拉', '轻食', '蔬菜'], w: 1600, h: 1067 },
+  { id: '1546069901-ba9599a7e63c', category: '美食', label: '美食', keywords: ['美食', '食物', '餐饮', '料理'], w: 1600, h: 1067 },
+
+  // 自然 / 环保
+  { id: '1441974231531-c6227db76b6e', category: '环保', label: '森林', keywords: ['森林', '环保', '自然', '绿色', '生态', '树木', '环境'], w: 1600, h: 1067 },
+  { id: '1500530855697-b586d89ba3ee', category: '环保', label: '自然', keywords: ['自然', '环保', '风景', '绿色', '生态', '环境'], w: 1600, h: 1067 },
+  { id: '1470071459604-3b5ec3a7fe05', category: '环保', label: '自然', keywords: ['自然', '环保', '风景', '山', '环境'], w: 1600, h: 1067 },
+  { id: '1472214103451-9374bd1c798e', category: '环保', label: '自然', keywords: ['自然', '环保', '风景', '环境', '生态'], w: 1600, h: 1067 },
+  { id: '1440342359743-84fcb8c21f21', category: '环保', label: '森林', keywords: ['森林', '环保', '树木', '绿色', '自然', '环境'], w: 1600, h: 1067 },
+  { id: '1433086966358-54859d0ed716', category: '环保', label: '自然瀑布', keywords: ['自然', '瀑布', '环保', '水', '风景', '环境'], w: 1600, h: 1067 },
+
+  // 城市 / 建筑
+  { id: '1449824913935-59a10b8d2000', category: '城市', label: '城市', keywords: ['城市', '都市', '建筑', '高楼', '夜景'], w: 1600, h: 1067 },
+  { id: '1477959858617-67f85cf4f1df', category: '城市', label: '城市', keywords: ['城市', '都市', '建筑', '夜景'], w: 1600, h: 1067 },
+  { id: '1480714378408-67cf0d13bc1b', category: '城市', label: '城市建筑', keywords: ['城市', '建筑', '都市', '楼'], w: 1600, h: 1067 },
+  { id: '1487958449943-2429e8be8625', category: '建筑', label: '建筑', keywords: ['建筑', '设计', '房屋', '楼', '空间'], w: 1600, h: 1067 },
+
+  // 科技
+  { id: '1518770660439-4636190af475', category: '科技', label: '科技', keywords: ['科技', '芯片', '电子', '电路', '硬件', 'AI', '人工智能'], w: 1600, h: 1067 },
+  { id: '1485827404703-89b55fcc595e', category: '科技', label: '科技AI', keywords: ['科技', 'AI', '人工智能', '机器人', '智能'], w: 1600, h: 1067 },
+  { id: '1526374965328-7f61d4dc18c5', category: '科技', label: '科技代码', keywords: ['科技', '代码', '编程', '程序', '互联网', '软件'], w: 1600, h: 1067 },
+  { id: '1519389950473-47ba0277781c', category: '科技', label: '科技团队', keywords: ['科技', '团队', '办公', '创业', '互联网'], w: 1600, h: 1067 },
+
+  // 汽车
+  { id: '1494976388531-d1058494cdd8', category: '汽车', label: '汽车', keywords: ['汽车', '车', '跑车', '轿车', '驾驶'], w: 1600, h: 1067 },
+  { id: '1503376780353-7e6692767b70', category: '汽车', label: '跑车', keywords: ['汽车', '跑车', '车', '豪车', '速度'], w: 1600, h: 1067 },
+  { id: '1552519507-da3b142c6e3d', category: '汽车', label: '汽车', keywords: ['汽车', '车', '轿车'], w: 1600, h: 1067 },
+
+  // 旅游
+  { id: '1507525428034-b723cf961d3e', category: '旅游', label: '旅行海滩', keywords: ['旅游', '旅行', '海滩', '度假', '海', '风景'], w: 1600, h: 1067 },
+  { id: '1469854523086-cc02fe5d8800', category: '旅游', label: '旅行', keywords: ['旅游', '旅行', '风景', '公路', '度假'], w: 1600, h: 1067 },
+  { id: '1488085061387-422e29b40080', category: '旅游', label: '旅行', keywords: ['旅游', '旅行', '风景', '度假', '户外'], w: 1600, h: 1067 },
+  { id: '1506929562872-bb421503ef21', category: '旅游', label: '旅行海滩', keywords: ['旅游', '旅行', '海滩', '度假', '海'], w: 1600, h: 1067 },
+
+  // 教育
+  { id: '1503676260728-1c00da094a0b', category: '教育', label: '教育', keywords: ['教育', '学习', '书', '阅读', '知识', '培训'], w: 1600, h: 1067 },
+  { id: '1427504494785-3a9ca7044f45', category: '教育', label: '教育', keywords: ['教育', '学习', '课堂', '学校', '培训'], w: 1600, h: 1067 },
+
+  // 健身 / 运动
+  { id: '1517836357463-d25dfeac3438', category: '运动', label: '健身', keywords: ['健身', '运动', '锻炼', '健身房', '体育'], w: 1600, h: 1067 },
+  { id: '1571019613454-1cb2f99b2d8b', category: '运动', label: '运动', keywords: ['运动', '健身', '跑步', '体育', '锻炼'], w: 1600, h: 1067 },
+  { id: '1461896836934-ffe607ba8211', category: '运动', label: '运动', keywords: ['运动', '体育', '比赛', '竞技'], w: 1600, h: 1067 },
+
+  // 商务 / 办公
+  { id: '1556761175-5973dc0f32e7', category: '商务', label: '商务办公', keywords: ['商务', '办公', '会议', '职场', '公司', '企业'], w: 1600, h: 1067 },
+  { id: '1454165804606-c3d57bc86b40', category: '商务', label: '商务', keywords: ['商务', '办公', '职场', '企业', '合作'], w: 1600, h: 1067 },
+  { id: '1497366216548-37526070297c', category: '商务', label: '办公', keywords: ['办公', '商务', '职场', '工作', '企业'], w: 1600, h: 1067 },
+  { id: '1521737711867-e3b97375f902', category: '商务', label: '团队', keywords: ['团队', '商务', '办公', '合作', '创业'], w: 1600, h: 1067 },
+
+  // 医疗 / 健康
+  { id: '1505751172876-fa1923c5c528', category: '健康', label: '医疗', keywords: ['医疗', '健康', '医生', '医院', '保健'], w: 1600, h: 1067 },
+  { id: '1532938911079-1b06ac7ceec7', category: '健康', label: '健康', keywords: ['健康', '医疗', '养生', '保健', '运动'], w: 1600, h: 1067 },
+  { id: '1576091160399-112ba8d25d1d', category: '健康', label: '医疗', keywords: ['医疗', '健康', '医生', '医院'], w: 1600, h: 1067 },
+
+  // 金融
+  { id: '1611974789855-9c2a0a7236a3', category: '金融', label: '金融', keywords: ['金融', '理财', '投资', '财富', '股票', '银行'], w: 1600, h: 1067 },
+  { id: '1554224155-6726b3ff858f', category: '金融', label: '金融', keywords: ['金融', '理财', '投资', '财务', '会计', '银行'], w: 1600, h: 1067 },
+
+  // 母婴
+  { id: '1519689680058-324335c77eba', category: '母婴', label: '母婴', keywords: ['母婴', '宝宝', '婴儿', '亲子', '育儿'], w: 1600, h: 1067 },
+  { id: '1544126592-807ade215a0b', category: '母婴', label: '母婴', keywords: ['母婴', '宝宝', '婴儿', '亲子'], w: 1600, h: 1067 },
+
+  // 宠物
+  { id: '1548199973-03cce0bbc87b', category: '宠物', label: '宠物狗', keywords: ['宠物', '狗', '动物', '萌宠'], w: 1600, h: 1067 },
+  { id: '1514888286974-6c03e2ca1dba', category: '宠物', label: '宠物猫', keywords: ['宠物', '猫', '动物', '萌宠'], w: 1600, h: 1067 },
+  { id: '1425082661705-1834bfd09dca', category: '宠物', label: '宠物', keywords: ['宠物', '动物', '萌宠'], w: 1600, h: 1067 },
+
+  // 美妆
+  { id: '1522335789203-aabd1fc54bc9', category: '美妆', label: '美妆', keywords: ['美妆', '化妆品', '护肤', '口红', '美容'], w: 1600, h: 1067 },
+  { id: '1596462502278-27bfdc403348', category: '美妆', label: '美妆', keywords: ['美妆', '化妆品', '护肤', '美容'], w: 1600, h: 1067 },
+  { id: '1512496015851-a90fb38ba796', category: '美妆', label: '美妆', keywords: ['美妆', '化妆品', '护肤', '美容', '彩妆'], w: 1600, h: 1067 },
+
+  // 音乐
+  { id: '1470229722913-7c0e2dbbafd3', category: '音乐', label: '音乐', keywords: ['音乐', '演唱会', '乐器', '演出', '现场'], w: 1600, h: 1067 },
+  { id: '1511379938547-c1f69419868d', category: '音乐', label: '音乐', keywords: ['音乐', '乐器', '钢琴', '演奏'], w: 1600, h: 1067 },
+
+  // 摄影 / 风景
+  { id: '1501854140801-50d01698950b', category: '风景', label: '风景', keywords: ['风景', '自然', '山水', '摄影', '风光'], w: 1600, h: 1067 },
+  { id: '1519681393784-d120267933ba', category: '风景', label: '风景山', keywords: ['风景', '山', '自然', '雪山', '风光'], w: 1600, h: 1067 },
+  { id: '1470770841072-f978cf4d019e', category: '风景', label: '风景', keywords: ['风景', '自然', '湖', '山水', '风光'], w: 1600, h: 1067 },
+
+  // ==== 补充：咖啡 ====
+  { id: '1501339847302-ac426a4a7cbb', category: '咖啡', label: '咖啡', keywords: ['咖啡', 'coffee', '饮品', '咖啡馆'], w: 1600, h: 1067 },
+  { id: '1524350876685-274059332603', category: '咖啡', label: '咖啡', keywords: ['咖啡', 'coffee', '饮品'], w: 1600, h: 1067 },
+  // ==== 补充：美食 ====
+  { id: '1555939594-58d7cb561ad1', category: '美食', label: '美食', keywords: ['美食', '食物', '餐饮', '料理'], w: 1600, h: 1067 },
+  { id: '1414235077428-338989a2e8c0', category: '美食', label: '美食', keywords: ['美食', '餐饮', '餐厅', '食物'], w: 1600, h: 1067 },
+  { id: '1467003909585-2f8a72700288', category: '美食', label: '美食', keywords: ['美食', '食物', '料理', '餐饮'], w: 1600, h: 1067 },
+  // ==== 补充：自然 ====
+  { id: '1447752875215-b2761acb3c5d', category: '环保', label: '森林', keywords: ['森林', '环保', '树木', '绿色', '自然', '环境'], w: 1600, h: 1067 },
+  { id: '1518495973542-4542c06a5843', category: '环保', label: '自然', keywords: ['自然', '环保', '风景', '环境', '生态'], w: 1600, h: 1067 },
+  { id: '1470252649378-9c29740c9fa8', category: '环保', label: '自然', keywords: ['自然', '环保', '风景', '环境', '日落'], w: 1600, h: 1067 },
+  { id: '1502082553048-f009c37129b9', category: '环保', label: '自然', keywords: ['自然', '环保', '森林', '绿色', '环境'], w: 1600, h: 1067 },
+  { id: '1469474968028-56623f02e42e', category: '环保', label: '自然山', keywords: ['自然', '山', '环保', '风景', '环境'], w: 1600, h: 1067 },
+  // ==== 补充：城市 ====
+  { id: '1514565131-fce0801e5785', category: '城市', label: '城市', keywords: ['城市', '都市', '建筑', '夜景'], w: 1600, h: 1067 },
+  { id: '1519501025264-65ba15a82390', category: '城市', label: '城市', keywords: ['城市', '都市', '建筑', '楼'], w: 1600, h: 1067 },
+  // ==== 补充：科技 ====
+  { id: '1531297484001-80022131f5a1', category: '科技', label: '科技', keywords: ['科技', '电子', '设备', '数码', '智能'], w: 1600, h: 1067 },
+  { id: '1550751827-4bd374c3f58b', category: '科技', label: '科技', keywords: ['科技', 'AI', '人工智能', '数字', '数据'], w: 1600, h: 1067 },
+  { id: '1555255707-c07966088b7b', category: '科技', label: '科技AI', keywords: ['科技', 'AI', '人工智能', '机器人'], w: 1600, h: 1067 },
+  // ==== 补充：汽车 ====
+  { id: '1553440569-bcc63803a83d', category: '汽车', label: '汽车', keywords: ['汽车', '车', '轿车', '驾驶'], w: 1600, h: 1067 },
+  { id: '1549317661-bd32c8ce0db2', category: '汽车', label: '汽车', keywords: ['汽车', '车', '跑车'], w: 1600, h: 1067 },
+  // ==== 补充：旅游 ====
+  { id: '1502602898657-3e91760cbb34', category: '旅游', label: '旅行', keywords: ['旅游', '旅行', '风景', '度假'], w: 1600, h: 1067 },
+  { id: '1499856871958-5b9627545d1a', category: '旅游', label: '旅行', keywords: ['旅游', '旅行', '风景', '度假', '户外'], w: 1600, h: 1067 },
+  // ==== 补充：教育 ====
+  { id: '1481627834876-b7833e8f5570', category: '教育', label: '教育书', keywords: ['教育', '学习', '书', '阅读', '知识'], w: 1600, h: 1067 },
+  { id: '1456513080510-7bf3a84b82f8', category: '教育', label: '教育', keywords: ['教育', '学习', '课堂', '学校', '培训'], w: 1600, h: 1067 },
+  // ==== 补充：运动 ====
+  { id: '1534438327276-14e5300c3a48', category: '运动', label: '健身', keywords: ['健身', '运动', '锻炼', '健身房'], w: 1600, h: 1067 },
+  { id: '1544367567-0f2fcb009e0b', category: '运动', label: '运动瑜伽', keywords: ['运动', '瑜伽', '健身', '健康'], w: 1600, h: 1067 },
+  // ==== 补充：商务 ====
+  { id: '1521791136064-7986c2920216', category: '商务', label: '商务握手', keywords: ['商务', '握手', '合作', '企业', '办公'], w: 1600, h: 1067 },
+  { id: '1552664730-d307ca884978', category: '商务', label: '商务会议', keywords: ['商务', '会议', '办公', '职场', '企业'], w: 1600, h: 1067 },
+  { id: '1573164713988-8665fc963095', category: '商务', label: '办公', keywords: ['办公', '商务', '职场', '工作'], w: 1600, h: 1067 },
+  // ==== 补充：健康 ====
+  { id: '1512290923902-8a9f81dc236c', category: '健康', label: '医疗', keywords: ['医疗', '健康', '医生', '医院'], w: 1600, h: 1067 },
+  { id: '1559757148-5c350d0d3c56', category: '健康', label: '健康', keywords: ['健康', '医疗', '养生', '保健'], w: 1600, h: 1067 },
+  // ==== 补充：金融 ====
+  { id: '1560472354-b33ff0c44a43', category: '金融', label: '金融', keywords: ['金融', '理财', '投资', '财富', '银行'], w: 1600, h: 1067 },
+  { id: '1560472355-536de3962603', category: '金融', label: '金融', keywords: ['金融', '理财', '投资', '财务'], w: 1600, h: 1067 },
+  // ==== 补充：母婴 ====
+  { id: '1543965170-4c01a586684e', category: '母婴', label: '母婴', keywords: ['母婴', '宝宝', '婴儿', '亲子'], w: 1600, h: 1067 },
+  { id: '1555252333-9f8e92e65df9', category: '母婴', label: '母婴', keywords: ['母婴', '宝宝', '婴儿', '育儿'], w: 1600, h: 1067 },
+  // ==== 补充：宠物 ====
+  { id: '1517849845537-4d257902454a', category: '宠物', label: '宠物狗', keywords: ['宠物', '狗', '动物', '萌宠'], w: 1600, h: 1067 },
+  { id: '1573865526739-10659fec78a5', category: '宠物', label: '宠物猫', keywords: ['宠物', '猫', '动物', '萌宠'], w: 1600, h: 1067 },
+  { id: '1450778869180-41d0601e046e', category: '宠物', label: '宠物', keywords: ['宠物', '动物', '萌宠'], w: 1600, h: 1067 },
+  // ==== 补充：美妆 ====
+  { id: '1487412947147-5cebf100ffc2', category: '美妆', label: '美妆', keywords: ['美妆', '化妆品', '护肤', '美容'], w: 1600, h: 1067 },
+  { id: '1571781926291-c477ebfd024b', category: '美妆', label: '美妆', keywords: ['美妆', '化妆品', '护肤', '彩妆'], w: 1600, h: 1067 },
+  // ==== 补充：音乐 ====
+  { id: '1516280440614-37939bbacd81', category: '音乐', label: '音乐', keywords: ['音乐', '乐器', '演奏', '演出'], w: 1600, h: 1067 },
+  { id: '1507838153414-b4b713384a76', category: '音乐', label: '音乐', keywords: ['音乐', '演唱会', '乐器', '现场'], w: 1600, h: 1067 },
+  // ==== 补充：婚礼 ====
+  { id: '1519741497674-611481863552', category: '婚庆', label: '婚礼', keywords: ['婚礼', '婚庆', '结婚', '浪漫'], w: 1600, h: 1067 },
+  { id: '1510076857177-7470076d4098', category: '婚庆', label: '婚礼', keywords: ['婚礼', '婚庆', '结婚', '新娘'], w: 1600, h: 1067 },
+  // ==== 补充：房产 ====
+  { id: '1560518883-ce09059eeffa', category: '房产', label: '房产', keywords: ['房产', '楼盘', '房屋', '住宅', '房地产'], w: 1600, h: 1067 },
+  { id: '1560448204-e02f11c3d0e2', category: '房产', label: '房产', keywords: ['房产', '房屋', '住宅', '房地产'], w: 1600, h: 1067 },
+  // ==== 补充：春天/节气 ====
+  { id: '1480796927426-f609979314bd', category: '节气', label: '春天', keywords: ['春天', '春', '花', '节气', '季节'], w: 1600, h: 1067 },
+  { id: '1490750967868-88aa4486c946', category: '节气', label: '春天花', keywords: ['春天', '花', '春', '节气', '樱花'], w: 1600, h: 1067 },
+  // ==== 补充：冬天 ====
+  { id: '1483664852095-d6cc6870702d', category: '节气', label: '冬天', keywords: ['冬天', '冬', '雪', '节气', '季节'], w: 1600, h: 1067 },
+  { id: '1477601263568-180e2c6d046e', category: '节气', label: '冬天', keywords: ['冬天', '雪', '冬', '季节'], w: 1600, h: 1067 },
+  // ==== 补充：节日 ====
+  { id: '1513151233558-d860c5398176', category: '节日', label: '节日', keywords: ['节日', '庆典', '庆祝', '活动'], w: 1600, h: 1067 },
+  // ==== 补充：招聘 ====
+  { id: '1521737604893-d14cc237f11d', category: '招聘', label: '招聘面试', keywords: ['招聘', '面试', '求职', '工作', '岗位'], w: 1600, h: 1067 },
+  { id: '1522202176988-66273c2fd55f', category: '招聘', label: '招聘团队', keywords: ['招聘', '求职', '工作', '团队', '岗位'], w: 1600, h: 1067 },
+  // ==== 补充：艺术 ====
+  { id: '1547891654-e66ed7ebb968', category: '艺术', label: '艺术', keywords: ['艺术', '设计', '创意', '插画', '美学'], w: 1600, h: 1067 },
+  { id: '1541961017774-22349e4a1262', category: '艺术', label: '艺术', keywords: ['艺术', '设计', '创意', '美学'], w: 1600, h: 1067 },
+]
+
+export function getLocalImagePool() {
+  return POOL
+}
+
+// 关键词 → 匹配图片（按关键词命中数排序）
+export function searchLocalPool(query, { limit = 24, seed = 0 } = {}) {
+  let q = String(query || '').trim().toLowerCase()
+  if (!q) return []
+  // 去掉常见后缀/语气词，让"环境类""咖啡海报"能命中核心词
+  q = q.replace(/[类海报图底素材版式模板宣传主视觉封面配图]/g, '').trim()
+  if (!q) return []
+
+  // 同义词/近义词映射，扩大命中
+  const SYNONYMS = {
+    '环境': ['环保', '自然', '森林', '绿色', '生态'],
+    '环保': ['环境', '自然', '森林', '绿色', '生态'],
+    '招聘': ['求职', '工作', '面试', '岗位', '商务'],
+    '求职': ['招聘', '工作', '面试', '岗位'],
+    '美食': ['餐饮', '食物', '料理', '餐厅'],
+    '餐饮': ['美食', '食物', '料理', '餐厅'],
+    '科技': ['AI', '人工智能', '数码', '电子', '智能'],
+    '汽车': ['车', '轿车', '跑车', '驾驶'],
+    '旅游': ['旅行', '度假', '风景', '户外'],
+    '旅行': ['旅游', '度假', '风景', '户外'],
+    '健康': ['医疗', '养生', '保健'],
+    '医疗': ['健康', '医生', '医院'],
+    '美妆': ['化妆', '护肤', '美容', '彩妆'],
+    '婚礼': ['婚庆', '结婚', '浪漫'],
+    '婚庆': ['婚礼', '结婚'],
+    '房产': ['楼盘', '房屋', '住宅', '房地产'],
+  }
+  const expandTerms = new Set([q])
+  for (const [k, syns] of Object.entries(SYNONYMS)) {
+    if (q.includes(k)) syns.forEach((s) => expandTerms.add(s))
+  }
+
+  const scored = POOL.map((img) => {
+    let score = 0
+    // 命中关键词（含同义词）
+    for (const kw of img.keywords) {
+      for (const term of expandTerms) {
+        if (kw.includes(term) || term.includes(kw)) {
+          score += kw.length >= 2 ? 2 : 1
+        }
+      }
+    }
+    // 命中分类
+    for (const term of expandTerms) {
+      if (img.category && (term.includes(img.category) || img.category.includes(term))) score += 3
+    }
+    // 命中标签
+    for (const term of expandTerms) {
+      if (img.label && (term.includes(img.label) || img.label.includes(term))) score += 1
+    }
+    return { img, score }
+  }).filter((x) => x.score > 0).sort((a, b) => b.score - a.score)
+
+  const results = scored.map((x) => x.img)
+  // 若无命中，返回默认的自然/通用图
+  if (results.length === 0) {
+    return POOL.filter((i) => ['环保', '风景', '自然'].includes(i.category)).slice(0, limit)
+  }
+  return results.slice(0, limit)
+}
+
+export function toPhoto(img) {
+  return {
+    id: img.id,
+    provider: 'local',
+    sourceName: 'Unsplash 图库',
+    description: `${img.label} · ${img.category}`,
+    url: P(img.id),
+    thumb: PT(img.id),
+    photographer: 'Unsplash 摄影师',
+    profileUrl: `https://unsplash.com/photos/${img.id}`,
+    sourceUrl: `https://unsplash.com/photos/${img.id}`,
+    license: 'Unsplash License',
+    width: img.w,
+    height: img.h,
+  }
+}

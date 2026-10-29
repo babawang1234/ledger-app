@@ -1,4 +1,5 @@
 import { config } from '../config/index.js'
+import { searchLocalPool, toPhoto } from '../lib/local-image-pool.js'
 
 const CACHE_TTL = 5 * 60 * 1000
 const cache = new Map()
@@ -132,8 +133,7 @@ export async function searchAssetImages({ query, originalQuery, orientation, per
   const settled = await Promise.allSettled(jobs.map((job) => job.promise))
   const photos = settled.flatMap((result) => result.status === 'fulfilled' ? result.value : [])
     .filter((photo) => photo.url?.startsWith('https://') && photo.thumb?.startsWith('https://'))
-  const unique = [...new Map(photos.map((photo) => [`${photo.provider}:${photo.id}`, photo])).values()].slice(0, perPage)
-  const providers = [...new Set(unique.map((photo) => photo.provider))]
+  const providers = [...new Set(photos.map((photo) => photo.provider))]
   const failures = settled.flatMap((result, index) => result.status === 'rejected' ? [{
     provider: jobs[index].provider,
     status: Number(result.reason?.status) || null,
@@ -145,20 +145,37 @@ export async function searchAssetImages({ query, originalQuery, orientation, per
   const hasPexelsKey = !!config.providers.pexels.apiKey
   const hasUnsplashKey = !!config.providers.unsplash.accessKey
   const keyMissing = !hasUnsplashKey && !hasPexelsKey
+
+  // 本地图库池兜底：当外部图库（无 Key 或网络不通）返回空时，用本地预置的真实图片补充
+  let localPhotos = []
+  let localFallback = false
+  if (photos.length === 0) {
+    localPhotos = searchLocalPool(queries[0], { limit: perPage }).map(toPhoto)
+    if (localPhotos.length) {
+      localFallback = true
+      localPhotos.forEach((p) => providers.push(p.provider))
+    }
+  }
+  const merged = [...photos, ...localPhotos]
+  const unique = [...new Map(merged.map((photo) => [`${photo.provider}:${photo.id}`, photo])).values()].slice(0, perPage)
+  const finalProviders = [...new Set(unique.map((photo) => photo.provider))]
+
   const value = {
     photos: unique,
-    providers,
+    providers: finalProviders,
     unavailable,
+    localFallback,
     providerStatus: {
       openverse: failures.some((failure) => failure.provider === 'openverse') ? 'unreachable' : 'available',
       pexels: !hasPexelsKey ? 'key_required' : authFailures.some((failure) => failure.provider === 'pexels') ? 'invalid_key' : unavailable.includes('pexels') ? 'unreachable' : 'available',
       unsplash: !hasUnsplashKey ? 'key_required' : authFailures.some((failure) => failure.provider === 'unsplash') ? 'invalid_key' : unavailable.includes('unsplash') ? 'unreachable' : 'available',
+      local: localFallback ? 'available' : 'idle',
     },
     keyMissing,
     message: unique.length ? '' : authFailures.length
       ? `${authFailures.map((failure) => `${failure.provider} 返回 HTTP ${failure.status}，请检查图库 API Key`).join('；')}。`
       : keyMissing && networkFailures.some((failure) => failure.provider === 'openverse')
-        ? 'Openverse 在当前服务端连接超时；Pexels / Unsplash 接口需要 API Key。请在 server/.env 配置至少一个图库 Key 后重启后端。'
+        ? 'Openverse 在当前服务端连接超时；已改用本地图库池返回结果。配置 Pexels / Unsplash Key 可获得更丰富的搜索覆盖。'
         : networkFailures.length
           ? `图库服务连接失败：${[...new Set(networkFailures.map((failure) => failure.provider))].join('、')}。请检查服务端网络或代理设置后重试。`
           : keyMissing

@@ -4,6 +4,7 @@ import { asyncHandler } from '../lib/http.js'
 import { db } from '../lib/db.js'
 import { draftCopy, parseBrief, scoreTemplates } from '../skills/poster/interpret.js'
 import { autoRoute, invoke } from '../adapters/index.js'
+import { searchLocalPool, toPhoto } from '../lib/local-image-pool.js'
 import path from 'path'
 import fs from 'fs'
 import { fileURLToPath } from 'url'
@@ -171,10 +172,12 @@ router.post(
     const { WanxAdapter } = await import('../adapters/wanx.js')
     const wanx = new WanxAdapter()
     if (!wanx.available) {
-      return res.status(503).json({
-        error: 'NO_AI_KEY',
-        images: [],
-        message: '未配置 AI 图像生成 Key（DASHSCOPE_API_KEY）。请在 server/.env 配置阿里云百炼 Key 后重启后端。',
+      // 无万相 Key 时降级为本地图库池匹配，返回真实贴图底图（而非报错）
+      const localImgs = searchLocalPool(keyword, { limit: count }).map(toPhoto)
+      return res.json({
+        images: localImgs,
+        fallback: 'local',
+        message: localImgs.length ? '' : '未配置 AI 图像生成 Key，且本地图库暂无匹配，请换更具体的关键词。',
       })
     }
 
