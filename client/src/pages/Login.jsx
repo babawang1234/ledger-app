@@ -77,6 +77,14 @@ export default function Login() {
         <div className="mt-4 rounded-lg border border-white/10 bg-white/5 p-3 text-center text-xs text-white/40">
           演示账号：demo@example.com / demo123456
         </div>
+        <div className="mt-3 text-center">
+          <Link
+            to="/admin/demo"
+            className="text-sm font-medium text-brand-violet hover:underline"
+          >
+            一键进入管理后台（免登录）
+          </Link>
+        </div>
       </div>
     </div>
   )
