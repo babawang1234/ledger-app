@@ -34,6 +34,8 @@ app.use('/uploads', express.static(config.uploadDir))
 app.use('/exports', express.static(config.exportDir))
 app.use('/templates', express.static(path.resolve(__dirname, '../public/templates')))
 app.use('/generated', express.static(path.resolve(__dirname, '../public/generated')))
+app.use('/design-backdrops', express.static(path.resolve(__dirname, '../public/design-backdrops')))
+app.use('/ai-images', express.static(path.resolve(__dirname, '../public/ai-images')))
 
 app.get('/api/health', (req, res) => res.json({ ok: true, env: config.env }))
 
