@@ -798,7 +798,7 @@ export default function Studio() {
                   {discoverList.map((t) => (
                     <div key={t.id} className="overflow-hidden rounded-xl border border-white/10 bg-white/[0.03] transition hover:border-brand-violet/50">
                       <div className="relative">
-                        <img src={t.thumbnail} alt={t.name} loading="lazy" className="aspect-[3/4] w-full object-cover" />
+                        <img src={t.thumbnail_path || t.thumbnail} alt={t.name} loading="lazy" className="aspect-[3/4] w-full bg-ink-900 object-cover" />
                         {t.badge && <span className="absolute left-2 top-2 rounded-full bg-black/55 px-2 py-0.5 text-[11px] text-white/85 backdrop-blur">{t.badge}</span>}
                       </div>
                       <div className="p-3.5">
