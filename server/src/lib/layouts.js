@@ -110,7 +110,9 @@ export function generateLayouts({ content = {}, purpose = '', canvas, styleAnaly
 function photoLayout({ content, palette, artSrc, index, stockAsset }) {
   if (stockAsset?.templateStyle) return craftedPhotoLayout({ content, palette, artSrc, index, stockAsset })
   const white = '#fffaf2'
-  const photo = { type: 'image', src: artSrc, x: 0, y: 0, width: 1, height: 1, fit: 'cover', zIndex: 0 }
+  // 关键：优先用真实照片 URL（stockAsset.url），回退到艺术图 artSrc
+  const photoSrc = stockAsset?.url || artSrc
+  const photo = { type: 'image', src: photoSrc, x: 0, y: 0, width: 1, height: 1, fit: 'cover', zIndex: 0 }
   // 压暗层 + 底部渐变 scrim：保证白字在任何照片上都可读
   const dim = { type: 'shape', kind: 'rect', x: 0, y: 0, width: 1, height: 1, color: '#07101b', opacity: [0.52, 0.58, 0.55, 0.6][index], zIndex: 1 }
   const bottomScrim = { type: 'shape', kind: 'rect', x: 0, y: 0.55, width: 1, height: 0.45, color: '#050a12', opacity: 0.45, zIndex: 2 }
@@ -145,7 +147,9 @@ function craftedPhotoLayout({ content, palette, artSrc, index = 0, stockAsset })
   const ink = '#191916'
   const coral = '#f06b4f'
   const green = '#b9d56a'
-  const photo = (x, y, width, height, radius = 0) => ({ type: 'image', src: artSrc, x, y, width, height, fit: 'cover', radius, templateStyle: style, zIndex: 1 })
+  // 关键：优先用真实照片 URL（stockAsset.url），回退到艺术图 artSrc
+  const photoSrc = stockAsset?.url || artSrc
+  const photo = (x, y, width, height, radius = 0) => ({ type: 'image', src: photoSrc, x, y, width, height, fit: 'cover', radius, templateStyle: style, zIndex: 1 })
   const block = (x, y, width, height, color, zIndex = 3, radius = 0) => ({ type: 'shape', kind: 'rect', x, y, width, height, color, zIndex, radius })
   const label = (text, x, y, color = ink, size = 0.018, extra = {}) => ({ type: 'text', text, x, y, color, fontSize: size, fontWeight: 700, zIndex: 20, ...extra })
   const line = (x, y, color = ink, width = 0.08) => block(x, y, width, 0.004, color, 12)

@@ -22,7 +22,8 @@ router.get('/search', asyncHandler(async (req, res) => {
   if (!query) return res.json({ photos: [] })
   const originalQuery = String(req.query.original || '').trim().slice(0, 160)
   const orientation = ['landscape', 'portrait', 'squarish'].includes(req.query.orientation) ? req.query.orientation : undefined
-  const result = await searchAssetImages({ query, originalQuery, orientation, perPage: 18 })
+  const limit = Math.min(48, Math.max(12, Number(req.query.limit) || 36))
+  const result = await searchAssetImages({ query, originalQuery, orientation, perPage: limit })
   res.json(result)
 }))
 

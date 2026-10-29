@@ -55,6 +55,14 @@ const EXPORT_SIZES = [
   { label: '公众号封面 900×383', scale: 0.35 },
   { label: '高清 2x', scale: 2 },
 ]
+const GENERIC_IMAGE_TERMS = new Set(['上新', '新品', '产品', '商品', '开售', '促销', '大促', '秒杀', '简约', '极简', '高级', '温暖', '典雅', '海报', '宣传图', '配图'])
+
+function fallbackImageSearchQuery(brief) {
+  const specificConcept = brief?.concepts?.find((concept) => concept.key !== 'product')
+  const terms = [specificConcept?.query, brief?.subject, ...(brief?.keywords || [])]
+    .filter((term) => term && !GENERIC_IMAGE_TERMS.has(term))
+  return [...new Set(terms)].join(' ')
+}
 
 export default function Studio() {
   const { projectId } = useParams()
@@ -102,6 +110,7 @@ export default function Studio() {
   const [stockPhotos, setStockPhotos] = useState([])
   const [stockAsset, setStockAsset] = useState(null)
   const [searchingStock, setSearchingStock] = useState(false)
+  const [stockSearchMessage, setStockSearchMessage] = useState('')
 
   // step3
   const [content, setContent] = useState({
@@ -289,6 +298,8 @@ export default function Studio() {
     }
     setInterpreting(true)
     setStockAsset(null)
+    setStockPhotos([])
+    setStockSearchMessage('')
     setChosenTemplate(null)
     setMatchedTemplates([])
     try {
@@ -305,27 +316,13 @@ export default function Studio() {
       setContent((current) => ({ ...current, ...drafted }))
       const projectTitle = drafted.headline || d.brief.subject || desc.slice(0, 18)
       setName((current) => current.trim() ? current : `${projectTitle}海报`)
-      // 关键词驱动模板发现
-      const kw = d.imageSearchQuery || d.brief.subject || (d.brief.keywords || []).join(' ') || desc
-      const seed = Math.floor(Math.random() * 1e6)
-      setDiscoverSeed(seed)
-      const topTemplate = d.templates?.[0]
-      if (topTemplate) {
-        setChosenTemplate(topTemplate)
-        const notes = topTemplate.designNotes || {}
-        const colors = String(notes.palette || '').match(/#[0-9a-fA-F]{6}/g) || []
-        setStyleAnalysis({
-          palette: colors.length >= 3 ? colors.slice(0, 3) : ['#d9ff72', '#f0a17c', '#25261f'],
-          paletteNotes: notes.palette || '',
-          composition: notes.composition || '',
-          typography: notes.hierarchy || '',
-          mock: !!d.brief.mock,
-          source: d.brief.mock ? '本地主题语义匹配' : 'AI 理解与摄影素材匹配',
-        })
-      }
-      const found = await discoverTemplates(kw, seed, { silent: true })
-      if (topTemplate?.stockAsset) setStockAsset(topTemplate.stockAsset)
-      else if (found[0]?.stockAsset) setStockAsset(found[0].stockAsset)
+      // The first search surface is for relevant real imagery, not a random collection
+      // of poster templates. Search the subject query and full brief in parallel providers.
+      const kw = d.brief.mock
+        ? fallbackImageSearchQuery(d.brief) || desc
+        : d.imageSearchQuery || d.brief.subject || (d.brief.keywords || []).join(' ') || desc
+      setStockQuery(kw)
+      await searchStockPhotos(kw, desc, { silent: true })
     } catch (e) {
       toast.error(e.message)
     } finally {
@@ -566,8 +563,9 @@ export default function Studio() {
     setStockQuery(searchQuery)
     setSearchingStock(true)
     try {
-      const data = await api.get(`/assets/search?q=${encodeURIComponent(searchQuery)}&original=${encodeURIComponent(originalQuery || '')}&orientation=${ratio.w >= ratio.h ? 'landscape' : 'portrait'}`)
+      const data = await api.get(`/assets/search?q=${encodeURIComponent(searchQuery)}&original=${encodeURIComponent(originalQuery || '')}&orientation=${ratio.w >= ratio.h ? 'landscape' : 'portrait'}&limit=36`)
       setStockPhotos(data.photos || [])
+      setStockSearchMessage(data.photos?.length ? '' : data.message || '没有找到相关实景素材。')
       if (!data.photos?.length && !silent) toast.push(data.message || '没有找到匹配素材，试着缩短关键词或换一个主体描述。')
       else if (data.photos?.length) setStockAsset(data.photos[0])
       return data.photos || []
@@ -712,7 +710,7 @@ export default function Studio() {
         <section className="mx-auto max-w-4xl">
           <div className="card p-8">
             <h1 className="text-2xl font-bold">你想做一张什么样的海报？</h1>
-            <p className="mt-2 text-sm text-white/50">用一句自然的话描述需求，我会解析用途与风格，并去灵感库检索匹配的模板供你选择。</p>
+            <p className="mt-2 text-sm text-white/50">用一句自然的话描述需求。我会先按具体主体查找真实图片素材，再进入海报排版。</p>
 
             <textarea
               aria-label="海报需求描述"
@@ -772,95 +770,65 @@ export default function Studio() {
 
           {brief && !interpreting && (
             <div className="mt-6 overflow-hidden rounded-2xl bg-[#f5f5f5] text-[#111] shadow-[0_0_0_1px_rgba(0,0,0,0.04),0_10px_40px_rgba(0,0,0,0.25)]">
-              {/* 顶部：花瓣式浅色工具条 */}
+              {/* 视觉素材检索：瀑布流只放真实图库图片 */}
               <div className="bg-white px-5 py-5 sm:px-8">
+                <h2 className="text-lg font-semibold">先找对主视觉素材</h2>
+                <p className="mt-1 text-xs text-[#888]">按你描述的具体主体搜索实景图片；不会拿不相关的模板填充结果。</p>
                 <div className="flex flex-wrap items-center gap-3">
                   <div className="flex flex-1 items-center gap-2">
                     <svg className="h-5 w-5 shrink-0 text-[#999]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="7" /><path d="m21 21-4.3-4.3" /></svg>
                     <input
-                      value={discoverQ}
-                      onChange={(e) => setDiscoverQ(e.target.value)}
-                      onKeyDown={(e) => e.key === 'Enter' && discoverTemplates(discoverQ, Math.floor(Math.random() * 1e6))}
-                      placeholder="搜索海报灵感，例如：咖啡、促销、招聘、发布会、环保…"
-                      aria-label="按关键词搜索模板"
+                      value={stockQuery}
+                      onChange={(e) => setStockQuery(e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && searchStockPhotos(stockQuery, description)}
+                      placeholder="搜索具体主体，例如：龙井茶叶、透明玻璃茶杯、清晨茶园…"
+                      aria-label="按需求搜索真实图片素材"
                       className="w-full bg-transparent text-[15px] text-[#333] placeholder-[#bbb] outline-none"
                     />
-                    {discoverQ && (
-                      <button onClick={() => { setDiscoverQ(''); discoverTemplates('', Math.floor(Math.random() * 1e6)) }} className="shrink-0 text-[#bbb] hover:text-[#666]">✕</button>
+                    {stockQuery && (
+                      <button onClick={() => { setStockQuery(''); setStockPhotos([]); setStockSearchMessage('') }} className="shrink-0 text-[#bbb] hover:text-[#666]">✕</button>
                     )}
                   </div>
                   <div className="flex shrink-0 items-center gap-2">
-                    <button onClick={() => discoverTemplates(discoverQ, Math.floor(Math.random() * 1e6))} disabled={discovering} className="rounded-full bg-[#222] px-5 py-2 text-sm font-medium text-white transition hover:bg-[#333] disabled:opacity-50">
-                      {discovering ? '搜索中…' : '搜索'}
-                    </button>
-                    <button onClick={() => discoverTemplates(discoverQ, Math.floor(Math.random() * 1e6))} disabled={discovering} className="rounded-full border border-[#e0e0e0] bg-white px-4 py-2 text-sm text-[#666] transition hover:border-[#ccc] hover:text-[#333]" title="换一批模板">
-                      ⟳ 换一换
+                    <button onClick={() => searchStockPhotos(stockQuery, description)} disabled={searchingStock || !stockQuery.trim()} className="rounded-full bg-[#222] px-5 py-2 text-sm font-medium text-white transition hover:bg-[#333] disabled:opacity-50">
+                      {searchingStock ? '搜索中…' : '搜索图片素材'}
                     </button>
                   </div>
                 </div>
               </div>
 
-              {/* 分类标签：花瓣式缩略图+文字，选中玫红高亮 */}
-              {categories.length > 0 && (
-                <div className="border-t border-[#eee] bg-white px-5 py-3 sm:px-8">
-                  <div className="scrollbar-thin flex gap-5 overflow-x-auto pb-1">
-                    <button onClick={() => { setDiscoverCategory(''); discoverTemplates(discoverQ, Math.floor(Math.random() * 1e6)) }} className="flex shrink-0 flex-col items-center gap-1.5">
-                      <span className={`flex h-12 w-12 items-center justify-center rounded-full text-xs font-semibold transition ${!discoverCategory ? 'bg-[#e8443a] text-white' : 'bg-[#f0f0f0] text-[#888] hover:bg-[#e8e8e8]'}`}>全部</span>
-                    </button>
-                    {categories.map((c) => (
-                      <button key={c.name} onClick={() => { setDiscoverCategory(c.name); discoverTemplates(discoverQ, Math.floor(Math.random() * 1e6)) }} className="flex shrink-0 flex-col items-center gap-1.5">
-                        <span className={`relative block h-12 w-12 overflow-hidden rounded-full ring-2 transition ${discoverCategory === c.name ? 'ring-[#e8443a]' : 'ring-transparent hover:ring-[#ddd]'}`}>
-                          {c.cover ? (
-                            <img src={c.cover} alt={c.name} className="h-full w-full object-cover" />
-                          ) : (
-                            <span className="flex h-full w-full items-center justify-center bg-[#f0f0f0] text-[#999]">{c.name.slice(0, 1)}</span>
-                          )}
-                        </span>
-                        <span className={`text-xs ${discoverCategory === c.name ? 'font-semibold text-[#e8443a]' : 'text-[#777]'}`}>{c.name}</span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* 瀑布流主体：浅色底，图满幅无边框，下方头像+昵称 */}
+              {/* 瀑布流主体：只呈现图库返回的真实图片及来源 */}
               <div className="px-5 pb-8 pt-2 sm:px-8">
                 <div className="flex items-center justify-between pb-3">
-                  <span className="text-xs text-[#999]">{discoverMatched > 0 ? `找到 ${discoverMatched} 个相关模板` : '为你推荐以下模板'}</span>
-                  <span className="text-xs text-[#bbb]">点击卡片即可编辑使用</span>
+                  <span className="text-xs text-[#999]">{stockPhotos.length ? `找到 ${stockPhotos.length} 张相关实景图片` : '等待搜索结果'}</span>
+                  <span className="text-xs text-[#bbb]">点击图片设为海报主视觉</span>
                 </div>
-                {discovering ? (
+                {searchingStock ? (
                   <div className="columns-2 gap-4 sm:columns-3 lg:columns-4 xl:columns-5 [&>*]:mb-4">
                     {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9].map((i) => <div key={i} className="rounded bg-[#e8e8e8]" style={{ height: `${140 + (i % 4) * 60}px` }} />)}
                   </div>
-                ) : discoverList.length === 0 ? (
+                ) : stockPhotos.length === 0 ? (
                   <div className="rounded-lg border border-dashed border-[#ddd] bg-white p-10 text-center">
-                    <p className="text-sm text-[#999]">换个关键词试试，或直接从零开始创作。</p>
+                    <p className="text-sm text-[#666]">{stockSearchMessage || '输入需求并点击“搜索图片素材”，先找到适合的背景图片。'}</p>
+                    <p className="mt-2 text-xs text-[#999]">若图库暂时没有结果，可换更具体的主体词；搜索服务需要服务端可访问图库。</p>
                   </div>
                 ) : (
                   <div className="columns-2 gap-4 sm:columns-3 lg:columns-4 xl:columns-5 [&>*]:mb-4 [&>*]:break-inside-avoid">
-                    {discoverList.map((t) => (
-                      <div key={t.id} className="group">
-                        <div className="relative cursor-pointer overflow-hidden rounded-md bg-white" onClick={() => useTemplate(t)}>
-                          <img src={t.thumbnail_path || t.thumbnail} alt={t.name} loading="lazy" className="w-full object-cover transition duration-300 group-hover:brightness-95" style={{ aspectRatio: t.canvas?.width && t.canvas?.height ? `${t.canvas.width}/${t.canvas.height}` : '3/4' }} />
-                          {/* 悬停浮出玫红采集按钮 */}
-                          <div className="absolute inset-0 flex items-center justify-center bg-black/0 transition duration-200 group-hover:bg-black/25">
-                            <span className="translate-y-1 rounded-full bg-[#e8443a] px-4 py-1.5 text-sm font-semibold text-white opacity-0 shadow-lg transition duration-200 group-hover:translate-y-0 group-hover:opacity-100">用这个模板</span>
-                          </div>
-                        </div>
-                        {/* 作者信息条：头像+昵称，仿花瓣网 */}
-                        <div className="mt-1.5 flex items-center gap-1.5 px-0.5">
-                          <span className="flex h-5 w-5 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[#e8443a] text-[10px] font-bold text-white">幻</span>
-                          <span className="truncate text-xs text-[#888]">{t.name}</span>
-                          <button className="ml-auto shrink-0 text-[#bbb] hover:text-[#666]" title="更多">···</button>
-                        </div>
-                      </div>
+                    {stockPhotos.map((photo) => (
+                      <article key={`${photo.provider}:${photo.id}`} className={`group overflow-hidden rounded-lg bg-white ${stockAsset?.id === photo.id ? 'ring-2 ring-[#e8443a]' : ''}`}>
+                        <button onClick={() => chooseStockPhoto(photo)} className="block w-full text-left">
+                          <img src={photo.thumb} alt={photo.description} loading="lazy" className="w-full object-cover transition duration-300 group-hover:brightness-95" />
+                          <span className="block truncate px-2.5 pt-2 text-xs text-[#444]">{photo.description}</span>
+                          <span className="block truncate px-2.5 pb-2 text-[11px] text-[#888]">{photo.photographer} · {photo.license || '开放许可'}</span>
+                        </button>
+                        <a className="block border-t border-[#eee] px-2.5 py-2 text-[11px] text-[#e8443a]" href={photo.sourceUrl} target="_blank" rel="noreferrer">查看 {photo.sourceName} 来源 ↗</a>
+                      </article>
                     ))}
                   </div>
                 )}
 
-                <button onClick={continueFromBrief} className="mt-4 w-full rounded-lg border border-[#e0e0e0] bg-white py-2.5 text-sm text-[#666] transition hover:border-[#ccc] hover:text-[#333]">
-                  不用模板，从零开始创作（文案已自动填写）→
+                <button onClick={continueFromBrief} disabled={!stockAsset} className="mt-4 w-full rounded-lg border border-[#e0e0e0] bg-white py-2.5 text-sm text-[#666] transition hover:border-[#ccc] hover:text-[#333] disabled:cursor-not-allowed disabled:opacity-45">
+                  {stockAsset ? '使用已选图片，继续设置画布 →' : '先选择一张主视觉图片，再继续'}
                 </button>
               </div>
             </div>

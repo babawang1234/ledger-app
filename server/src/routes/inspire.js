@@ -140,7 +140,12 @@ router.post(
         mockNote: ai ? '' : '本地语义规则解析；配置 DeepSeek/OpenAI 文本模型后会使用真实模型理解需求。',
       },
       content: content || draft,
-      imageSearchQuery: String(exactTopicOnly ? fallback.concepts[0].query : ai?.imageSearchQuery || fallback.concepts?.[0]?.query || fallback.subject || description).slice(0, 120),
+      // Specific subject terms must win over broad intent concepts such as "new product".
+      // When no text model is configured, preserve the user's concrete subject instead of
+      // falling back to generic stock phrases like "premium product still life".
+      imageSearchQuery: String(exactTopicOnly
+        ? fallback.concepts[0].query
+        : ai?.imageSearchQuery || [fallback.subject, ...(fallback.keywords || [])].filter(Boolean).join(' ') || description).slice(0, 160),
       templates: recommendations,
     })
   })

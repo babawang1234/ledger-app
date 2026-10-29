@@ -6,7 +6,8 @@ const cache = new Map()
 function cleanQuery(value) {
   return String(value || '')
     .replace(/^(?:我想|我想要|帮我|请帮我|请|给我|帮忙)?(?:做|制作|设计|生成)?(?:一张|一个|一款|一组|一幅)?/u, '')
-    .replace(/(?:海报|宣传图|主视觉|封面|配图|底图|背景素材).*/u, '')
+    // Remove asset-type labels but preserve the user's visual details that follow them.
+    .replace(/(?:海报|宣传图|主视觉|封面|配图|底图|背景素材)/gu, ' ')
     .replace(/[，,。.!！?？；;\n]/gu, ' ')
     .replace(/\s+/gu, ' ')
     .trim()
@@ -19,7 +20,11 @@ async function requestJson(url, init = {}) {
     signal: AbortSignal.timeout(6500),
     redirect: 'error',
   })
-  if (!response.ok) throw new Error(`素材源返回 HTTP ${response.status}`)
+  if (!response.ok) {
+    const error = new Error(`素材源返回 HTTP ${response.status}`)
+    error.status = response.status
+    throw error
+  }
   return response.json()
 }
 
@@ -129,15 +134,36 @@ export async function searchAssetImages({ query, originalQuery, orientation, per
     .filter((photo) => photo.url?.startsWith('https://') && photo.thumb?.startsWith('https://'))
   const unique = [...new Map(photos.map((photo) => [`${photo.provider}:${photo.id}`, photo])).values()].slice(0, perPage)
   const providers = [...new Set(unique.map((photo) => photo.provider))]
-  const unavailable = [...new Set(settled.flatMap((result, index) => result.status === 'rejected' ? [jobs[index].provider] : []))]
+  const failures = settled.flatMap((result, index) => result.status === 'rejected' ? [{
+    provider: jobs[index].provider,
+    status: Number(result.reason?.status) || null,
+    code: result.reason?.cause?.code || result.reason?.name || 'ERROR',
+  }] : [])
+  const unavailable = [...new Set(failures.map((failure) => failure.provider))]
+  const authFailures = failures.filter((failure) => failure.status === 401 || failure.status === 403)
+  const networkFailures = failures.filter((failure) => !failure.status)
+  const hasPexelsKey = !!config.providers.pexels.apiKey
+  const hasUnsplashKey = !!config.providers.unsplash.accessKey
+  const keyMissing = !hasUnsplashKey && !hasPexelsKey
   const value = {
     photos: unique,
     providers,
     unavailable,
-    keyMissing: !config.providers.unsplash.accessKey && !config.providers.pexels.apiKey,
-    message: unique.length ? '' : unavailable.includes('openverse')
-      ? '开放图库暂不可连接，请检查服务端网络；也可配置 Pexels / Unsplash API Key 扩大图库覆盖。'
-      : '当前图库没有返回相关结果；可缩短关键词，或配置 Pexels / Unsplash API Key 扩大图库覆盖。',
+    providerStatus: {
+      openverse: failures.some((failure) => failure.provider === 'openverse') ? 'unreachable' : 'available',
+      pexels: !hasPexelsKey ? 'key_required' : authFailures.some((failure) => failure.provider === 'pexels') ? 'invalid_key' : unavailable.includes('pexels') ? 'unreachable' : 'available',
+      unsplash: !hasUnsplashKey ? 'key_required' : authFailures.some((failure) => failure.provider === 'unsplash') ? 'invalid_key' : unavailable.includes('unsplash') ? 'unreachable' : 'available',
+    },
+    keyMissing,
+    message: unique.length ? '' : authFailures.length
+      ? `${authFailures.map((failure) => `${failure.provider} 返回 HTTP ${failure.status}，请检查图库 API Key`).join('；')}。`
+      : keyMissing && networkFailures.some((failure) => failure.provider === 'openverse')
+        ? 'Openverse 在当前服务端连接超时；Pexels / Unsplash 接口需要 API Key。请在 server/.env 配置至少一个图库 Key 后重启后端。'
+        : networkFailures.length
+          ? `图库服务连接失败：${[...new Set(networkFailures.map((failure) => failure.provider))].join('、')}。请检查服务端网络或代理设置后重试。`
+          : keyMissing
+            ? '图库没有返回匹配图片；Pexels / Unsplash API Key 可扩大摄影素材覆盖。'
+            : '图库已连接，但没有返回相关图片；可改用更具体的主体词搜索。',
   }
   cache.set(cacheKey, { at: Date.now(), value })
   return value

@@ -2,6 +2,7 @@ import { modelRegistry } from './registry.js'
 import { MockAdapter } from './mock.js'
 import { DeepSeekAdapter } from './deepseek.js'
 import { OpenAIAdapter } from './openai.js'
+import { WanxAdapter } from './wanx.js'
 import { StockAdapter } from './stock.js'
 import { HttpError } from '../lib/http.js'
 
@@ -16,6 +17,7 @@ const adapters = {
   mock: new MockAdapter(),
   deepseek: new DeepSeekAdapter(),
   openai: new OpenAIAdapter(),
+  wanx: new WanxAdapter(),
   stock: new StockAdapter(),
 }
 

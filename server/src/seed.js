@@ -50,8 +50,10 @@ modelRegistry.upsert({ provider: 'deepseek', model_id: 'deepseek-flash', display
 modelRegistry.upsert({ provider: 'openai', model_id: 'gpt-4o-mini', display_name: 'GPT-4o mini（文本）', capabilities: ['text'], price_per_unit: 2, unit_label: '次', est_wait_seconds: 8, enabled: 1, is_mock: 0, sort_order: 3 })
 // OpenAI GPT Image 官方图像生成模型
 modelRegistry.upsert({ provider: 'openai', model_id: 'gpt-image-1', display_name: 'GPT Image 1（高质量图像）', capabilities: ['image_generation', 'image_edit'], price_per_unit: 18, unit_label: '次', est_wait_seconds: 50, enabled: 1, is_mock: 0, sort_order: 4 })
+// 通义万相（阿里云百炼）国内文生图，中文 prompt 友好，支持海报
+modelRegistry.upsert({ provider: 'wanx', model_id: 'wanx-v1', display_name: '通义万相（文生图）', capabilities: ['image_generation'], price_per_unit: 6, unit_label: '次', est_wait_seconds: 30, enabled: 1, is_mock: 0, sort_order: 5 })
 // 使用图库照片的确定性海报渲染，不调用图像生成 API
-modelRegistry.upsert({ provider: 'stock', model_id: 'stock-renderer', display_name: '图库摄影排版（不调用图像生成模型）', capabilities: ['image_generation', 'image_edit'], price_per_unit: 5, unit_label: '次', est_wait_seconds: 8, enabled: 1, is_mock: 0, sort_order: 5 })
+modelRegistry.upsert({ provider: 'stock', model_id: 'stock-renderer', display_name: '图库摄影排版（不调用图像生成模型）', capabilities: ['image_generation', 'image_edit'], price_per_unit: 5, unit_label: '次', est_wait_seconds: 8, enabled: 1, is_mock: 0, sort_order: 6 })
 // Mock 演示模型（始终可用，明确标注）
 modelRegistry.upsert({ provider: 'mock', model_id: 'mock-text', display_name: '演示文本模型（Mock）', capabilities: ['text'], price_per_unit: 1, unit_label: '次', est_wait_seconds: 1, enabled: 1, is_mock: 1, sort_order: 100 })
 modelRegistry.upsert({ provider: 'mock', model_id: 'mock-vision', display_name: '演示视觉分析（Mock）', capabilities: ['image_input'], price_per_unit: 2, unit_label: '次', est_wait_seconds: 1, enabled: 1, is_mock: 1, sort_order: 101 })

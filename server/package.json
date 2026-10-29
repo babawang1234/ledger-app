@@ -9,7 +9,8 @@
     "start": "node src/index.js",
     "seed": "node src/seed.js",
     "refresh:templates": "node scripts/refresh-templates.js",
-    "sync:templates": "node src/scripts/sync-templates.js"
+    "sync:templates": "node src/scripts/sync-templates.js",
+    "ai:templates": "node src/scripts/ai-templates.js"
   },
   "dependencies": {
     "@napi-rs/canvas": "^0.1.65",

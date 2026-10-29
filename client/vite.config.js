@@ -3,6 +3,11 @@ import react from '@vitejs/plugin-react'
 
 export default defineConfig({
   plugins: [react()],
+  // Keep React and React DOM on one module instance in the npm-workspace dev server.
+  // This also avoids invalid-hook-call failures when the optimizer cache is stale.
+  resolve: {
+    dedupe: ['react', 'react-dom'],
+  },
   server: {
     port: 5173,
     proxy: {

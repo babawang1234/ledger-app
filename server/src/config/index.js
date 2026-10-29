@@ -31,6 +31,10 @@ export const config = {
       apiKey: process.env.OPENAI_API_KEY || '',
       baseUrl: process.env.OPENAI_BASE_URL || 'https://api.openai.com/v1',
     },
+    dashscope: {
+      apiKey: process.env.DASHSCOPE_API_KEY || '',
+      baseUrl: process.env.DASHSCOPE_BASE_URL || 'https://dashscope.aliyuncs.com/api/v1',
+    },
   },
   defaults: {
     textModel: process.env.DEFAULT_TEXT_MODEL || 'deepseek-chat',

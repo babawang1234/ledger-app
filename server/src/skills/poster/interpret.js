@@ -158,8 +158,8 @@ export function parseBrief(description = '') {
   else understanding.push('描述中没有明确的风格词，我会结合用途选择稳妥的配色，你可以在下一步调整。')
   if (ratioHits[0]) understanding.push(`「${ratioHits[0].words[0]}」通常对应${ratioHits[0].key}画布，已为你预设（可修改）。`)
   else understanding.push('未指定尺寸，默认使用 3:4 竖版海报画布。')
-  if (concepts[0]?.key === 'teachers-day') understanding.push('已识别为教师节致敬主题，只推荐教师与课堂相关的实景摄影模板。')
-  else if (concepts.length) understanding.push(`主视觉主题识别为「${concepts[0].matched[0]}」，我会优先匹配对应摄影素材与版式。`)
+  if (concepts[0]?.key === 'teachers-day') understanding.push('已识别为教师节致敬主题，只推荐教师与课堂相关的实景摄影素材。')
+  else if (concepts.length) understanding.push(`主视觉主题识别为「${subject || concepts[0].matched[0]}」，我会优先按这个具体主体检索实景素材。`)
   understanding.push('我会先替你补好标题、说明和行动文案；你可以直接在预览前逐项修改。')
 
   return {

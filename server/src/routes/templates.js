@@ -80,17 +80,6 @@ router.get(
     const category = String(req.query.category || '').trim()
     const limit = Math.min(Number(req.query.limit) || 12, 60)
 
-    // 简易可复现随机（mulberry32）
-    const rand = (() => {
-      let a = seed * 0x9e3779b9 + 0x6d2b79f5
-      return () => {
-        a |= 0; a = (a + 0x6d2b79f5) | 0
-        let t = Math.imul(a ^ (a >>> 15), 1 | a)
-        t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t
-        return ((t ^ (t >>> 14)) >>> 0) / 4294967296
-      }
-    })()
-
     let all = db.prepare('SELECT * FROM templates').all().filter((t) => !exclude.includes(t.id))
     if (category) all = all.filter((t) => t.category === category)
     const tokens = raw
@@ -164,15 +153,14 @@ router.get(
     })
 
     const matched = scored.filter((s) => s.score > 0).sort((a, b) => b.score - a.score).map((s) => s.t)
-    const rest = scored.filter((s) => s.score <= 0).map((s) => s.t)
-    rest.sort(() => rand() - 0.5)
-
-    const picked = [...matched, ...rest].slice(0, limit)
+    // Never pad search results with unrelated templates. Random recommendations made
+    // the UI label unrelated designs as matches (e.g. tea searches showing finance).
+    const picked = matched.slice(0, limit)
     res.json({
       templates: picked.map(serialize),
-      matched: matched.length,
+      matched: picked.length,
       query: raw,
-      fallback: matched.length < limit,
+      fallback: false,
     })
   })
 )
