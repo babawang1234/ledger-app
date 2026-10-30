@@ -2,9 +2,10 @@ import { Router } from 'express'
 import { authRequired } from '../middleware/auth.js'
 import { asyncHandler } from '../lib/http.js'
 import { config } from '../config/index.js'
-import { searchAssetImages } from '../services/asset-search.js'
+import { searchAssetImages, searchDesignAssets } from '../services/asset-search.js'
 import { generateDesignBackdrops } from '../lib/design-backdrop.js'
 import { encodeBufferToDataUrl } from '../lib/renderer.js'
+import { getCachedGeneration, setCachedGeneration } from '../lib/gen-cache.js'
 
 const router = Router()
 router.use(authRequired)
@@ -14,8 +15,9 @@ router.get('/status', asyncHandler(async (req, res) => {
   res.json({
     unsplash: !!config.providers.unsplash.accessKey,
     pexels: !!config.providers.pexels.apiKey,
+    pixabay: !!config.providers.pixabay.apiKey,
     openverse: true,
-    anyConfigured: !!(config.providers.unsplash.accessKey || config.providers.pexels.apiKey),
+    anyConfigured: !!(config.providers.unsplash.accessKey || config.providers.pexels.apiKey || config.providers.pixabay.apiKey),
   })
 }))
 
@@ -29,32 +31,77 @@ router.get('/search', asyncHandler(async (req, res) => {
 
   // 关键兜底：图库 + 本地池都无命中时（aiFallback），用真实 AI 生图按关键词生成贴题图，
   // 解决"换任意关键词搜不出、图文不符"的根本问题（AI 能理解"水厂"等具体实体词）。
+  //
+  // 三层策略（面向大众，避免免费额度被并发打爆）：
+  //   1) 落盘缓存命中 → 直接复用，不消耗额度
+  //   2) 智谱 CogView-3-Flash（免费、中文理解强、一次真出多张不同图）
+  //   3) Pollinations 兜底（无 Key 时，1 真图 + 像素变体）
   let aiGeneratedPhotos = []
   if (result.aiFallback && result.photos.length === 0) {
     try {
-      const { PollinationsAdapter, deriveVariants } = await import('../adapters/pollinations.js')
       const { keywordToImagePrompt } = await import('../lib/image-prompt.js')
-      const pollinations = new PollinationsAdapter()
-      if (pollinations.available) {
-        const prompt = keywordToImagePrompt(query)
-        if (prompt) {
-          const { buffer } = await pollinations.generateImage({ prompt, width: 1080, height: 1440 })
-          // 生成 6 张差异明显的变体，让用户有更多选择（而非只有 1~3 张）
-          const variants = await deriveVariants(buffer, 6)
-          aiGeneratedPhotos = variants.map((v, i) => {
-            // 图片以 data URL 直接返回，不落盘，避免占用本地磁盘
-            const dataUrl = encodeBufferToDataUrl(v.buffer, 'image/jpeg')
+      const prompt = keywordToImagePrompt(query)
+      if (prompt) {
+        // 层 1：缓存命中
+        const cached = getCachedGeneration(query, 1080, 1440)
+        if (cached && cached.length) {
+          aiGeneratedPhotos = cached.map((buf, i) => {
+            const dataUrl = encodeBufferToDataUrl(buf, 'image/jpeg')
             return {
-              id: `ai-search-${Date.now()}-${i}`,
+              id: `ai-cache-${Date.now()}-${i}`,
               provider: 'ai',
               sourceName: 'AI 生成',
               description: `${query} · AI 生成贴题图 ${i + 1}`,
-              url: dataUrl,
-              thumb: dataUrl,
+              url: dataUrl, thumb: dataUrl,
               photographer: 'AI 生成',
               license: 'AI 生成 · 可商用',
             }
           })
+        } else {
+          // 层 2：智谱免费生图（真·多张不同图）
+          const { ZhipuAdapter } = await import('../adapters/zhipu.js')
+          const zhipu = new ZhipuAdapter()
+          if (zhipu.available) {
+            const { urls } = await zhipu.generateImage({ prompt, width: 1080, height: 1440, n: 4 })
+            const buffers = await Promise.all(
+              urls.map(async (u) => {
+                const r = await fetch(u, { signal: AbortSignal.timeout(30000) })
+                return Buffer.from(await r.arrayBuffer())
+              })
+            )
+            setCachedGeneration(query, 1080, 1440, buffers)
+            aiGeneratedPhotos = buffers.map((buf, i) => {
+              const dataUrl = encodeBufferToDataUrl(buf, 'image/jpeg')
+              return {
+                id: `ai-zhipu-${Date.now()}-${i}`,
+                provider: 'ai', sourceName: 'AI 生成',
+                description: `${query} · AI 生成贴题图 ${i + 1}`,
+                url: dataUrl, thumb: dataUrl,
+                photographer: 'AI 生成',
+                license: 'AI 生成 · 可商用',
+              }
+            })
+          } else {
+            // 层 3：Pollinations 兜底（无 Key 时）
+            const { PollinationsAdapter, deriveVariants } = await import('../adapters/pollinations.js')
+            const pollinations = new PollinationsAdapter()
+            if (pollinations.available) {
+              const { buffer } = await pollinations.generateImage({ prompt, width: 1080, height: 1440 })
+              const variants = await deriveVariants(buffer, 6)
+              setCachedGeneration(query, 1080, 1440, variants.map((v) => v.buffer))
+              aiGeneratedPhotos = variants.map((v, i) => {
+                const dataUrl = encodeBufferToDataUrl(v.buffer, 'image/jpeg')
+                return {
+                  id: `ai-search-${Date.now()}-${i}`,
+                  provider: 'ai', sourceName: 'AI 生成',
+                  description: `${query} · AI 生成贴题图 ${i + 1}`,
+                  url: dataUrl, thumb: dataUrl,
+                  photographer: 'AI 生成',
+                  license: 'AI 生成 · 可商用',
+                }
+              })
+            }
+          }
         }
       }
     } catch (e) {
@@ -102,8 +149,19 @@ router.get('/design-backdrops', asyncHandler(async (req, res) => {
   const query = String(req.query.q || '').trim().slice(0, 100)
   if (!query) return res.json({ backdrops: [] })
   const count = Math.min(12, Math.max(4, Number(req.query.count) || 8))
+
+  // 优先：从 Pixabay 搜真实设计类素材（abstract/pattern/texture），有设计感且区别于摄影图
+  let designAssets = []
+  try {
+    designAssets = await searchDesignAssets(query, { count })
+  } catch (e) {
+    console.warn('[design-backdrops] 图库设计素材获取失败：', e.message)
+  }
+
+  // 兜底：程序化生成设计底图（渐变/孟菲斯/几何等），保证任何关键词都能出图
   const backdrops = generateDesignBackdrops(query, { count })
-  const items = backdrops.map((b) => {
+
+  const programmatic = backdrops.map((b) => {
     const dataUrl = encodeBufferToDataUrl(b.buffer, 'image/png')
     return {
       id: b.id,
@@ -119,7 +177,10 @@ router.get('/design-backdrops', asyncHandler(async (req, res) => {
       height: b.height,
     }
   })
-  res.json({ backdrops: items })
+
+  // 真实设计素材在前（更有设计感），程序化生成在后（兜底）
+  const items = [...designAssets, ...programmatic]
+  res.json({ backdrops: items, fromGallery: !!designAssets.length })
 }))
 
 // Required by Unsplash API guidelines when a user selects a photo for use.

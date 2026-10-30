@@ -9,6 +9,7 @@ server/dist/
 # 运行时数据（本地数据库、上传文件、导出文件）
 server/data/*.db
 server/data/*.db-*
+server/data/gen-cache/*
 server/uploads/*
 server/exports/*
 !server/uploads/.gitkeep

@@ -3,6 +3,7 @@ import { MockAdapter } from './mock.js'
 import { DeepSeekAdapter } from './deepseek.js'
 import { OpenAIAdapter } from './openai.js'
 import { WanxAdapter } from './wanx.js'
+import { ZhipuAdapter } from './zhipu.js'
 import { StockAdapter } from './stock.js'
 import { HttpError } from '../lib/http.js'
 
@@ -18,6 +19,7 @@ const adapters = {
   deepseek: new DeepSeekAdapter(),
   openai: new OpenAIAdapter(),
   wanx: new WanxAdapter(),
+  zhipu: new ZhipuAdapter(),
   stock: new StockAdapter(),
 }
 

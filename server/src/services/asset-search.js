@@ -77,6 +77,23 @@ function normalizeOpenverse(image) {
   }
 }
 
+function normalizePixabay(hit) {
+  const large = hit.largeImageURL
+  const thumb = hit.webformatURL || hit.previewURL || large
+  return {
+    id: String(hit.id),
+    provider: 'pixabay',
+    sourceName: 'Pixabay',
+    description: hit.tags ? `Pixabay · ${hit.tags.split(',').slice(0, 4).join(' / ')}` : 'Pixabay 免费素材',
+    url: large,
+    thumb,
+    photographer: hit.user || 'Pixabay contributor',
+    profileUrl: `https://pixabay.com/users/${encodeURIComponent(hit.user || '')}/`,
+    sourceUrl: hit.pageURL || 'https://pixabay.com',
+    license: 'Pixabay License（免费可商用）',
+  }
+}
+
 async function searchUnsplash(query, orientation, perPage) {
   if (!config.providers.unsplash.accessKey) return []
   const url = new URL('https://api.unsplash.com/search/photos')
@@ -114,19 +131,64 @@ async function searchOpenverse(query, orientation, perPage) {
   return (data.results || []).map(normalizeOpenverse).filter((photo) => photo.url && photo.thumb && photo.sourceUrl)
 }
 
+async function searchPixabay(query, orientation, perPage) {
+  if (!config.providers.pixabay.apiKey) return []
+  const url = new URL('https://pixabay.com/api/')
+  url.searchParams.set('key', config.providers.pixabay.apiKey)
+  url.searchParams.set('q', query)
+  url.searchParams.set('per_page', String(perPage))
+  url.searchParams.set('image_type', 'photo')
+  url.searchParams.set('safesearch', 'true')
+  if (orientation === 'landscape') url.searchParams.set('orientation', 'horizontal')
+  if (orientation === 'portrait') url.searchParams.set('orientation', 'vertical')
+  const data = await requestJson(url)
+  return (data.hits || []).map(normalizePixabay).filter((photo) => photo.url && photo.thumb)
+}
+
+/**
+ * 从 Pixabay 搜索「设计类」素材（abstract / pattern / gradient / texture / 几何），
+ * 作为「设计底图」Tab 的真实素材来源，区别于摄影图。
+ * 程序化生成（generateDesignBackdrops）仍作兜底。
+ */
+export async function searchDesignAssets(query, { count = 12 } = {}) {
+  if (!config.providers.pixabay.apiKey) return []
+  const designTerms = ['abstract', 'pattern', 'gradient', 'texture', 'geometric']
+  // 把用户关键词与设计类词组合，例如「茶」→「tea abstract / 茶 纹理」
+  const terms = [query, ...designTerms.map((t) => `${query} ${t}`)].filter(Boolean)
+  const seen = new Set()
+  const results = []
+  for (const term of terms) {
+    if (results.length >= count) break
+    try {
+      const hits = await searchPixabay(term, undefined, 12)
+      for (const photo of hits) {
+        if (results.length >= count) break
+        if (seen.has(photo.id)) continue
+        seen.add(photo.id)
+        // 设计底图：打上 design 标记，复用同一素材结构
+        results.push({ ...photo, kind: 'design', sourceName: 'Pixabay 设计素材' })
+      }
+    } catch (e) {
+      console.warn('[design-assets] Pixabay 设计素材搜索失败：', e.message)
+    }
+  }
+  return results
+}
+
 export async function searchAssetImages({ query, originalQuery, orientation, perPage = 18 }) {
   const primary = cleanQuery(query)
   const original = cleanQuery(originalQuery)
   const queries = [...new Set([primary, original].filter(Boolean))].slice(0, 2)
   if (!queries.length) return { photos: [], providers: [], message: '输入主体关键词后即可搜索背景素材。' }
 
-  const cacheKey = JSON.stringify({ queries, orientation, perPage, hasUnsplash: !!config.providers.unsplash.accessKey, hasPexels: !!config.providers.pexels.apiKey })
+  const cacheKey = JSON.stringify({ queries, orientation, perPage, hasUnsplash: !!config.providers.unsplash.accessKey, hasPexels: !!config.providers.pexels.apiKey, hasPixabay: !!config.providers.pixabay.apiKey })
   const cached = cache.get(cacheKey)
   if (cached && Date.now() - cached.at < CACHE_TTL) return cached.value
 
   const jobs = []
   for (const searchQuery of queries) {
     jobs.push({ provider: 'openverse', promise: searchOpenverse(searchQuery, orientation, Math.max(6, Math.ceil(perPage / queries.length))) })
+    if (config.providers.pixabay.apiKey) jobs.push({ provider: 'pixabay', promise: searchPixabay(searchQuery, orientation, Math.max(6, Math.ceil(perPage / queries.length))) })
     if (config.providers.unsplash.accessKey) jobs.push({ provider: 'unsplash', promise: searchUnsplash(searchQuery, orientation, Math.max(6, Math.ceil(perPage / queries.length))) })
     if (config.providers.pexels.apiKey) jobs.push({ provider: 'pexels', promise: searchPexels(searchQuery, orientation, Math.max(6, Math.ceil(perPage / queries.length))) })
   }
@@ -144,7 +206,8 @@ export async function searchAssetImages({ query, originalQuery, orientation, per
   const networkFailures = failures.filter((failure) => !failure.status)
   const hasPexelsKey = !!config.providers.pexels.apiKey
   const hasUnsplashKey = !!config.providers.unsplash.accessKey
-  const keyMissing = !hasUnsplashKey && !hasPexelsKey
+  const hasPixabayKey = !!config.providers.pixabay.apiKey
+  const keyMissing = !hasUnsplashKey && !hasPexelsKey && !hasPixabayKey
 
   // 本地图库池兜底：当外部图库（无 Key 或网络不通）返回空时，用本地预置的真实图片补充
   let localPhotos = []
@@ -172,6 +235,7 @@ export async function searchAssetImages({ query, originalQuery, orientation, per
     aiFallback,
     providerStatus: {
       openverse: failures.some((failure) => failure.provider === 'openverse') ? 'unreachable' : 'available',
+      pixabay: !hasPixabayKey ? 'key_required' : authFailures.some((failure) => failure.provider === 'pixabay') ? 'invalid_key' : unavailable.includes('pixabay') ? 'unreachable' : 'available',
       pexels: !hasPexelsKey ? 'key_required' : authFailures.some((failure) => failure.provider === 'pexels') ? 'invalid_key' : unavailable.includes('pexels') ? 'unreachable' : 'available',
       unsplash: !hasUnsplashKey ? 'key_required' : authFailures.some((failure) => failure.provider === 'unsplash') ? 'invalid_key' : unavailable.includes('unsplash') ? 'unreachable' : 'available',
       local: localFallback ? 'available' : 'idle',

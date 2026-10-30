@@ -35,6 +35,15 @@ export const config = {
       apiKey: process.env.DASHSCOPE_API_KEY || '',
       baseUrl: process.env.DASHSCOPE_BASE_URL || 'https://dashscope.aliyuncs.com/api/v1',
     },
+    zhipu: {
+      // 智谱 AI（免费文生图 CogView-3-Flash，中文友好）
+      apiKey: process.env.ZHIPU_API_KEY || '',
+      baseUrl: process.env.ZHIPU_BASE_URL || 'https://open.bigmodel.cn/api/paas/v4',
+    },
+    pixabay: {
+      // Pixabay 免费可商用图库（含中文素材），解决「都是外国图」问题
+      apiKey: process.env.PIXABAY_API_KEY || '',
+    },
     pollinations: {
       // 免 Key 免费生图服务，作为无万相 Key 时的真实 AI 生图兜底
       enabled: process.env.POLLINATIONS_ENABLED !== 'false',
