@@ -11,19 +11,12 @@
  * 依赖：server/.env 配置 DASHSCOPE_API_KEY（阿里云百炼，免费额度）。
  * 未配置时脚本会退出并提示。
  */
-import path from 'path'
-import fs from 'fs'
-import { fileURLToPath } from 'url'
 import { config } from '../config/index.js'
 import { db } from '../lib/db.js'
 import { genId } from '../lib/util.js'
-import { renderPoster } from '../lib/renderer.js'
+import { encodeBufferToDataUrl } from '../lib/renderer.js'
 import { generateLayouts } from '../lib/layouts.js'
 import { WanxAdapter } from '../adapters/wanx.js'
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url))
-const OUT_DIR = path.resolve(__dirname, '../../public/templates')
-const AI_IMG_DIR = path.resolve(__dirname, '../../public/ai-images')
 
 const DEFAULT_KEYWORDS = [
   '咖啡 咖啡馆 温暖 木质 手冲咖啡', '环保 绿色 地球 自然 森林',
@@ -39,14 +32,13 @@ function promptFor(keyword) {
   return `${kw}主题海报背景图，高级设计感，构图留白充足便于叠加标题文字，色彩协调，专业平面设计风格，高清，无文字无字母无logo，竖版构图`
 }
 
-// 下载远程图到本地（避免万相 24h URL 过期）
-async function downloadImage(url, dest) {
+// 下载远程图（返回 base64 data URL，不落盘）
+async function downloadImageAsDataUrl(url) {
   const res = await fetch(url, { signal: AbortSignal.timeout(30000) })
   if (!res.ok) throw new Error(`下载图片失败 HTTP ${res.status}`)
   const bytes = Buffer.from(await res.arrayBuffer())
   if (bytes.length > 20 * 1024 * 1024) throw new Error('图片超出 20MB')
-  fs.writeFileSync(dest, bytes)
-  return bytes
+  return encodeBufferToDataUrl(bytes, 'image/png')
 }
 
 // 示例文案（比旧版更贴主题，减少「泛用话术」感）
@@ -77,9 +69,6 @@ async function main() {
     ? args.join(' ').split(/[,，]/).map((s) => s.trim()).filter(Boolean)
     : DEFAULT_KEYWORDS
 
-  fs.mkdirSync(OUT_DIR, { recursive: true })
-  fs.mkdirSync(AI_IMG_DIR, { recursive: true })
-
   console.log(`[ai-templates] 用万相生成 ${keywords.length} 个关键词的真实海报模板…`)
   let created = 0
   let failed = 0
@@ -93,29 +82,19 @@ async function main() {
       console.log(`[ai-templates] (${i + 1}/${keywords.length}) 生成「${kw}」底图…`)
       const { url } = await wanx.generateImage({ prompt, width: CANVAS.width, height: CANVAS.height })
 
-      // 2. 下载到本地
-      const imgFile = `ai-${kw}-${i}.png`
-      const imgPath = path.join(AI_IMG_DIR, imgFile)
-      await downloadImage(url, imgPath)
+      // 2. 下载为 data URL（不落盘）
+      const imgDataUrl = await downloadImageAsDataUrl(url)
 
-      // 3. 套排版叠标题（用本地绝对路径，renderer 可直接加载）
+      // 3. 套排版叠标题
       const content = sampleContentFor(keyword, i)
       const layouts = generateLayouts({
         content,
         purpose: '通用海报',
         canvas: CANVAS,
         styleAnalysis: { palette: ['#d9ff72', '#f0a17c', '#25261f'] },
-        stockAsset: { url: imgPath, sourceName: 'AI 生成', photographer: '', templateStyle: undefined },
+        stockAsset: { url: imgDataUrl, sourceName: 'AI 生成', photographer: '', templateStyle: undefined },
       })
       const layout = layouts[0]
-
-      // 4. 渲染 PNG 缩略图入库
-      const filename = `tpl-ai-${kw}-${i}.png`
-      const buf = await renderPoster({
-        width: CANVAS.width, height: CANVAS.height,
-        background: layout.background, layers: layout.layers,
-      })
-      fs.writeFileSync(path.join(OUT_DIR, filename), buf)
 
       const name = `${kw} · ${content.headline}`
       const tags = JSON.stringify([kw, ...keyword.split(/\s+/), 'AI生成', '真实底图', '在线模板'])
@@ -128,13 +107,13 @@ async function main() {
       ).run(
         genId('tpl'), name, kw, '通用海报', description,
         JSON.stringify({ composition: layout.feature, palette: 'AI 自动配色', scenario: `${kw}海报` }),
-        JSON.stringify(content), `/templates/${filename}`,
+        JSON.stringify(content), imgDataUrl,
         JSON.stringify(layout.layers), JSON.stringify(CANVAS), JSON.stringify(layout.background),
         tags, 0, 'AI生成',
       )
 
       created++
-      console.log(`[ai-templates] ✓ ${name} → ${filename}`)
+      console.log(`[ai-templates] ✓ ${name}`)
     } catch (e) {
       console.error(`[ai-templates] ✗ 「${kw}」失败：${e.message}`)
       failed++

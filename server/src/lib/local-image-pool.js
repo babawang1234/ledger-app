@@ -303,40 +303,96 @@ export function searchLocalPool(query, { limit = 24, seed = 0 } = {}) {
     '制造': ['工厂', '工业', '厂房', '车间'],
     '车间': ['工厂', '工业', '制造', '厂房'],
   }
-  const expandTerms = new Set([q])
-  for (const [k, syns] of Object.entries(SYNONYMS)) {
-    if (q.includes(k)) syns.forEach((s) => expandTerms.add(s))
+  // 关键修复：不再把「整串 query」当作一个 term 去做 includes 匹配（那会导致
+  // "新能源汽车充电桩"因含"汽车"二字而误命中跑车图、"空气净化器"因含"净化"而误命中净水设施）。
+  // 改为：先把 query 切分成「候选词」，再用词做精确/包含匹配。
+  const terms = tokenizeQuery(q)
+  const expandTerms = new Set(terms)
+  // 同义词只对「精确命中某个词」的候选词展开，避免整串包含误触。
+  for (const term of terms) {
+    if (SYNONYMS[term]) SYNONYMS[term].forEach((s) => expandTerms.add(s))
   }
 
-  // 匹配打分：完整词 > 子串包含；避免"水厂"因含"水"字误命中"瀑布"。
-  // 关键：单字子串不再作为命中依据，只有 ≥2 字的完整词或明确的 category/label 相等才算命中。
+  // 匹配打分：完整词相等 > 词是关键词的连续子串 > 关键词是词的子串（均要求 ≥2 字）。
+  // 歧义消解：若 query 里存在 ≥3 字的具体词（如"充电桩""净化器"），这些长词是用户意图的主导。
+  // 当长词在本地池无任何命中时，说明本地池没有贴合图片，应返回空触发 AI 生图兜底，
+  // 而不是用 2 字宽泛词（"汽车""净化"）命中无关图。
+  const longTerms = [...expandTerms].filter((t) => t.length >= 3)
+  // longTermHasHit 只依据 category / keywords 的严格匹配（label 是描述性短语，如"水厂净化器"
+  // 会因含"净化器"子串而误判"空气净化器"有贴题图），避免歧义。
+  const longTermHasHit = longTerms.some((term) =>
+    POOL.some((img) =>
+      (img.category && (img.category === term || img.category.includes(term))) ||
+      (img.keywords || []).some((kw) => kw === term || kw.includes(term))
+    )
+  )
+
   const scored = POOL.map((img) => {
     let score = 0
     // 1) 命中分类（最高权重）
     for (const term of expandTerms) {
+      if (term.length < 2) continue
       if (img.category && term === img.category) score += 8
-      else if (img.category && term.length >= 2 && img.category.includes(term)) score += 5
+      else if (img.category && img.category.includes(term)) score += 5
     }
-    // 2) 命中 label（完整相等权重高）
+    // 2) 命中 label
     for (const term of expandTerms) {
+      if (term.length < 2) continue
       if (img.label && term === img.label) score += 6
-      else if (img.label && term.length >= 2 && img.label.includes(term)) score += 3
+      else if (img.label && img.label.includes(term)) score += 3
     }
-    // 3) 命中关键词：完整相等优先；子串包含要求双方都 ≥2 字且非单字
+    // 3) 命中关键词
     for (const kw of img.keywords) {
       for (const term of expandTerms) {
-        if (!term || term.length < 2) continue // 单字词不作为命中依据
+        if (term.length < 2) continue
         if (kw === term) score += 4
-        else if (kw.length >= 2 && (kw.includes(term) || term.includes(kw))) score += 1
+        else if (kw.length >= 2 && term.length >= 2 && kw.includes(term)) score += 2
       }
     }
     return { img, score }
   }).filter((x) => x.score > 0).sort((a, b) => b.score - a.score)
 
+  // 歧义消解：query 含 ≥3 字主导词但本地池无对应图时，返回空（交给 AI 生图兜底理解具体词），
+  // 避免"新能源汽车充电桩"返回跑车、"空气净化器"返回净水设施这类图文不符。
+  if (longTerms.length > 0 && !longTermHasHit) return []
+
   const results = scored.map((x) => x.img)
   // 无命中时返回空，由上层触发 AI 生图兜底（而非返回无关默认图）
   if (results.length === 0) return []
   return results.slice(0, limit)
+}
+
+// 轻量中文切词：基于 POOL 词典做正向最大匹配，剩余部分用滑动子串兜底。
+// 输出的是「词」，不是整串，避免整串 includes 造成的误命中。
+const TOKEN_DICT = (() => {
+  const set = new Set()
+  for (const img of POOL) {
+    if (img.category) set.add(img.category)
+    if (img.label) set.add(img.label)
+    for (const kw of img.keywords || []) set.add(kw)
+  }
+  // 补充常见海报实体词，增强切词准确性
+  ;['新能源', '汽车', '充电桩', '充电', '净化器', '空气', '净化', '茶叶', '龙井', '马拉松', '跑步', '水厂', '污水处理', '净水', '工业', '工厂', '咖啡', '咖啡店', '情人节', '七夕'].forEach((w) => set.add(w))
+  return [...set].sort((a, b) => b.length - a.length)
+})()
+
+function tokenizeQuery(q) {
+  const tokens = new Set()
+  // 正向最大匹配切词（最长词优先，保证"污水处理"优先于"水""处理"）
+  let rest = q
+  while (rest.length > 0) {
+    let matched = null
+    for (const word of TOKEN_DICT) {
+      if (rest.startsWith(word)) { matched = word; break }
+    }
+    if (matched) {
+      tokens.add(matched)
+      rest = rest.slice(matched.length)
+    } else {
+      rest = rest.slice(1) // 跳过未命中字符
+    }
+  }
+  return [...tokens].filter((t) => t && t.length >= 2)
 }
 
 export function toPhoto(img) {

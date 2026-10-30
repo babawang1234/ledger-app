@@ -18,18 +18,11 @@
  * 依赖：server/.env 配置 PEXELS_API_KEY（免费）可获得语义匹配摄影图；
  *       未配置时摄影类回退 Picsum 随机图，其余类型不受影响。
  */
-import path from 'path'
-import fs from 'fs'
-import { fileURLToPath } from 'url'
 import { config } from '../config/index.js'
 import { db } from '../lib/db.js'
 import { genId } from '../lib/util.js'
-import { renderPoster } from '../lib/renderer.js'
 import { generateLayouts } from '../lib/layouts.js'
 import { createArtworkDataUrl } from '../lib/artwork.js'
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url))
-const OUT_DIR = path.resolve(__dirname, '../../public/templates')
 
 const DEFAULT_KEYWORDS = [
   '环保 绿色 自然', '教育 学习 书本', '科技 人工智能 数据', '金融 理财 商务',
@@ -161,7 +154,6 @@ async function main() {
     : DEFAULT_KEYWORDS
 
   console.log(`[sync] 目标关键词 ${keywords.length} 个，多样化生成模板（摄影/艺术/渐变等 7 类）…`)
-  fs.mkdirSync(OUT_DIR, { recursive: true })
 
   let created = 0
   let failed = 0
@@ -192,12 +184,9 @@ async function main() {
         })
 
         const slugBase = primaryKw.replace(/[^\w\u4e00-\u9fa5-]+/g, '-')
-        const filename = `tpl-sync-${slugBase}-${type}-${globalIndex}.png`
-        const buf = await renderPoster({
-          width: canvas.width, height: canvas.height,
-          background: layout.background, layers: layout.layers,
-        })
-        fs.writeFileSync(path.join(OUT_DIR, filename), buf)
+
+        // 不落盘：摄影类缩略图直接用远程照片，艺术/渐变类缩略图留空（前端 PosterCanvas 实时渲染 layers）
+        const thumbnailPath = kind === 'photo' && stockAsset?.url ? stockAsset.url : null
 
         const name = `${primaryKw} · ${content.headline}`
         const tags = JSON.stringify([primaryKw, ...keyword.split(/\s+/), badge, '在线模板', kind])
@@ -217,7 +206,7 @@ async function main() {
           description,
           JSON.stringify({ composition: layout.feature, palette: palette.join('、'), scenario: `${primaryKw}海报` }),
           JSON.stringify(content),
-          `/templates/${filename}`,
+          thumbnailPath,
           JSON.stringify(layout.layers),
           JSON.stringify(canvas),
           JSON.stringify(layout.background),
@@ -228,7 +217,7 @@ async function main() {
 
         created++
         globalIndex++
-        console.log(`[sync] ${name}（${badge}）→ ${filename}`)
+        console.log(`[sync] ${name}（${badge}）`)
       } catch (e) {
         console.error(`[sync] 渲染失败（${keyword}#${i}）：${e.message}`)
         failed++

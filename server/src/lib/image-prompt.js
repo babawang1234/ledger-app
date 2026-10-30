@@ -56,6 +56,28 @@ const TOPIC_MAP = [
   { keys: ['水厂', '净水', '水处理', '污水处理', '自来水', '水务'], en: 'a modern water treatment plant with circular settling tanks and clean industrial facilities, aerial view, blue and white industrial tones, professional engineering photography, space for text' },
   { keys: ['工厂', '工业', '制造', '车间', '厂房'], en: 'a modern industrial factory with clean production facilities and machinery, blue grey industrial tones, professional manufacturing photography, space for text' },
   { keys: ['电力', '发电', '能源', '电站'], en: 'a modern power plant with cooling towers and transmission lines, blue sky, industrial energy photography, space for text' },
+
+  // 交通 / 新能源（新增，解决"充电桩""新能源汽车"等具体词）
+  { keys: ['充电桩', '充电站', '新能源汽车', '电动车', '充电'], en: 'a modern electric vehicle charging station with sleek charging piles and a clean energy aesthetic, bright and futuristic, professional photography, space for text' },
+  { keys: ['新能源', '清洁能源', '光伏', '太阳能'], en: 'solar panels and clean energy infrastructure under a bright blue sky, sustainable technology, space for text' },
+
+  // 农业 / 食品原料（新增，解决"茶叶""咖啡豆"等具体词）
+  { keys: ['茶叶', '茶园', '龙井', '茶山'], en: 'a lush green tea plantation with fresh tea leaves on rolling hills, morning mist, serene agricultural landscape, space for text' },
+  { keys: ['大米', '粮食', '稻田', '农场'], en: 'golden rice paddy fields at harvest time, warm sunlight, agricultural landscape, space for text' },
+  { keys: ['水果', '果园', '橙子', '苹果'], en: 'fresh fruits in a vibrant orchard, colorful and appetizing, professional food photography, space for text' },
+
+  // 运动 / 户外（新增，解决"马拉松""登山"等具体词）
+  { keys: ['马拉松', '跑步', '长跑', '越野跑'], en: 'a marathon runner on an open road at sunrise, dynamic and energetic, sport photography, space for text' },
+  { keys: ['登山', '爬山', '徒步', '露营', '户外'], en: 'a hiker on a mountain trail with a scenic view, adventurous outdoor mood, space for text' },
+  { keys: ['篮球', '足球', '运动', '球赛'], en: 'a dynamic sports scene with athletes in action, energetic and vivid, professional sports photography, space for text' },
+
+  // 家居 / 生活（新增，解决"空气净化器""家电"等具体词）
+  { keys: ['空气净化器', '净化器', '家电', '家居'], en: 'a modern air purifier in a clean bright living room, minimalist home appliance, soft natural light, space for text' },
+  { keys: ['家具', '沙发', '客厅', '室内'], en: 'a stylish modern living room with elegant furniture, warm and cozy interior design, space for text' },
+
+  // 医疗 / 保健（新增，解决"中医""养生"等具体词）
+  { keys: ['中医', '养生', '针灸', '保健'], en: 'traditional chinese medicine herbs and natural wellness elements, warm earthy tones, serene healing mood, space for text' },
+  { keys: ['医院', '医生', '护士', '医疗'], en: 'a clean modern medical environment with caring healthcare professionals, bright and trustworthy, space for text' },
 ]
 
 // 通用摄影背景模板（兜底，保证不跑题到无关内容）
@@ -64,9 +86,9 @@ function genericBackdrop(term) {
   return `a professional background photo representing "${romanized}", soft lighting, elegant composition, subtle atmosphere, generous empty space for text overlay, high quality`
 }
 
-// 中文转拼音（粗略，用于兜底保留原义线索）
+// 中文转英文关键词（粗略，用于兜底保留原义线索）
 function toRomanized(text) {
-  // 简单映射常用单字，避免完全丢失语义
+  // 常用单字/双字 → 英文映射，覆盖常见海报主体
   const map = {
     花: 'flower', 茶: 'tea', 酒: 'wine', 书: 'book', 灯: 'light', 山: 'mountain',
     水: 'water', 海: 'sea', 天: 'sky', 星: 'star', 月: 'moon', 日: 'sun',
@@ -74,9 +96,13 @@ function toRomanized(text) {
     春: 'spring', 夏: 'summer', 秋: 'autumn', 冬: 'winter', 木: 'wood', 金: 'gold',
     红: 'red', 蓝: 'blue', 绿: 'green', 黑: 'black', 白: 'white', 紫: 'purple',
     美: 'beauty', 家: 'home', 城: 'city', 街: 'street', 店: 'shop', 园: 'garden',
+    车: 'car', 电: 'electricity', 充: 'charge', 桩: 'pile', 新: 'new', 能: 'energy',
+    咖: 'coffee', 啡: 'coffee', 机: 'machine', 器: 'device', 器皿: 'vessel',
+    龙: 'dragon', 井: 'well', 叶: 'leaf', 跑: 'run', 马: 'horse', 拉: 'pull', 松: 'pine',
+    医: 'medical', 药: 'medicine', 教: 'education', 育: 'nurture', 学: 'study', 习: 'learn',
   }
   const chars = [...text].filter((c) => map[c]).map((c) => map[c])
-  return chars.slice(0, 4).join(' ') || text
+  return chars.slice(0, 5).join(' ') || text
 }
 
 /**

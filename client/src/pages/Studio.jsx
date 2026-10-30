@@ -653,6 +653,24 @@ export default function Studio() {
     }
   }
 
+  /** 设计底图链路：关键词 → 后端现场生成抽象设计背景（区别于摄影图与 AI 生图） */
+  async function generateDesignBackdrops(query = stockQuery) {
+    const q = String(query || '').trim()
+    if (!q) return []
+    setSearchingDesign(true)
+    try {
+      const data = await api.get(`/assets/design-backdrops?q=${encodeURIComponent(q)}&count=8`)
+      setDesignBackdrops(data.backdrops || [])
+      if (data.backdrops?.length) setStockAsset(data.backdrops[0])
+      return data.backdrops || []
+    } catch (e) {
+      toast.error(e.message)
+      return []
+    } finally {
+      setSearchingDesign(false)
+    }
+  }
+
   /** AI 生成底图链路：关键词 → 真实 AI 文生图 → 返回可选的底图 */
   async function generateAiBackground(query = stockQuery, { silent = false } = {}) {
     const q = String(query || '').trim()
@@ -921,7 +939,7 @@ export default function Studio() {
                         if (e.key !== 'Enter') return
                         if (sourceMode === 'photo') searchStockPhotos(stockQuery, description)
                         else if (sourceMode === 'ai') generateAiBackground(stockQuery)
-                        else searchStockPhotos(stockQuery, description)
+                        else generateDesignBackdrops(stockQuery)
                       }}
                       placeholder={sourceMode === 'ai' ? '描述你想要的底图，例如：温暖的咖啡店、清晨的茶园…' : '搜索具体主体，例如：龙井茶叶、透明玻璃茶杯、清晨茶园…'}
                       aria-label="按需求获取主视觉素材"
@@ -936,9 +954,13 @@ export default function Studio() {
                       <button onClick={() => generateAiBackground(stockQuery)} disabled={generatingAi || !stockQuery.trim()} className="rounded-full bg-[#e8443a] px-5 py-2 text-sm font-medium text-white transition hover:bg-[#d93a30] disabled:opacity-50">
                         {generatingAi ? 'AI 生成中…' : 'AI 生成底图'}
                       </button>
+                    ) : sourceMode === 'design' ? (
+                      <button onClick={() => generateDesignBackdrops(stockQuery)} disabled={searchingDesign || !stockQuery.trim()} className="rounded-full bg-[#e8443a] px-5 py-2 text-sm font-medium text-white transition hover:bg-[#d93a30] disabled:opacity-50">
+                        {searchingDesign ? '生成中…' : '生成设计底图'}
+                      </button>
                     ) : (
                       <button onClick={() => searchStockPhotos(stockQuery, description)} disabled={searchingStock || !stockQuery.trim()} className="rounded-full bg-[#222] px-5 py-2 text-sm font-medium text-white transition hover:bg-[#333] disabled:opacity-50">
-                        {searchingStock ? '搜索中…' : sourceMode === 'design' ? '生成设计底图' : '搜索图片素材'}
+                        {searchingStock ? '搜索中…' : '搜索图片素材'}
                       </button>
                     )}
                   </div>

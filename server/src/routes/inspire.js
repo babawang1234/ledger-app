@@ -7,11 +7,6 @@ import { autoRoute, invoke } from '../adapters/index.js'
 import { searchLocalPool, toPhoto } from '../lib/local-image-pool.js'
 import { generateLayouts } from '../lib/layouts.js'
 import { renderPoster, encodeBufferToDataUrl } from '../lib/renderer.js'
-import path from 'path'
-import fs from 'fs'
-import { fileURLToPath } from 'url'
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
 const router = Router()
 router.use(authRequired)
@@ -172,9 +167,6 @@ router.post(
     const count = Math.min(4, Math.max(1, Number(req.body?.count) || 3))
     if (!keyword) return res.status(400).json({ error: 'EMPTY_KEYWORD', message: '请提供关键词' })
 
-    const aiImgDir = path.resolve(__dirname, '../../public/ai-images')
-    fs.mkdirSync(aiImgDir, { recursive: true })
-
     // 1) 尝试通义万相（真实 AI 生图，中文理解最好）
     const { WanxAdapter } = await import('../adapters/wanx.js')
     const wanx = new WanxAdapter()
@@ -190,17 +182,16 @@ router.post(
         try {
           const prompt = prompts[i % prompts.length]
           const { url } = await wanx.generateImage({ prompt, width: 1080, height: 1920 })
-          const filename = `ai-${Date.now()}-${i}.png`
           const res2 = await fetch(url, { signal: AbortSignal.timeout(30000) })
           if (!res2.ok) throw new Error(`下载 AI 图失败 HTTP ${res2.status}`)
           const bytes = Buffer.from(await res2.arrayBuffer())
-          fs.writeFileSync(path.join(aiImgDir, filename), bytes)
+          const dataUrl = encodeBufferToDataUrl(bytes, 'image/png')
           images.push({
             id: `ai-${Date.now()}-${i}`,
             provider: 'ai',
             sourceName: 'AI 生成',
-            url: `/ai-images/${filename}`,
-            thumb: `/ai-images/${filename}`,
+            url: dataUrl,
+            thumb: dataUrl,
             description: `${keyword} · AI 生成底图 ${i + 1}`,
             photographer: 'AI 生成',
             license: 'AI 生成 · 可商用',
@@ -229,14 +220,13 @@ router.post(
         // 由 1 张真图派生多张变体，规避限速
         const variants = await deriveVariants(buffer, Math.max(1, count))
         variants.forEach((v, i) => {
-          const filename = `ai-p-${Date.now()}-${i}.jpg`
-          fs.writeFileSync(path.join(aiImgDir, filename), v.buffer)
+          const dataUrl = encodeBufferToDataUrl(v.buffer, 'image/jpeg')
           images.push({
             id: `ai-p-${Date.now()}-${i}`,
             provider: 'ai',
             sourceName: 'AI 生成',
-            url: `/ai-images/${filename}`,
-            thumb: `/ai-images/${filename}`,
+            url: dataUrl,
+            thumb: dataUrl,
             description: `${keyword} · AI 生成底图 ${i + 1}`,
             photographer: 'AI 生成',
             license: 'AI 生成 · 可商用',
@@ -256,19 +246,16 @@ router.post(
 
     // 3) 最后兜底：本地设计底图引擎（保证有结果，但明确标注非 AI 生图）
     const { generateDesignBackdrops } = await import('../lib/design-backdrop.js')
-    const dir = path.resolve(__dirname, '../../public/design-backdrops')
-    fs.mkdirSync(dir, { recursive: true })
     const backdrops = generateDesignBackdrops(keyword, { count })
     const images = backdrops.map((b) => {
-      const filename = `ai-db-${Date.now()}-${b.variant}.png`
-      fs.writeFileSync(path.join(dir, filename), b.buffer)
+      const dataUrl = encodeBufferToDataUrl(b.buffer, 'image/png')
       return {
         id: b.id,
         provider: 'ai-design',
         sourceName: '设计底图',
         description: `${keyword} · 设计背景 ${b.variant + 1}`,
-        url: `/design-backdrops/${filename}`,
-        thumb: `/design-backdrops/${filename}`,
+        url: dataUrl,
+        thumb: dataUrl,
         photographer: '幻象工坊 · 设计库',
         license: '设计底图 · 可商用',
         kind: 'design',
@@ -301,7 +288,7 @@ router.post(
     const content = draftCopy(description, brief.purpose, brief.concepts)
     const subjectQuery = (brief.subject || brief.concepts[0]?.matched[0] || description).slice(0, 60)
 
-    // 2) 获取底图：优先本地图库池（内容已校验），无命中则 AI 生图兜底
+    // 2) 获取底图：优先本地图库池（内容已校验），无命中则 AI 生图兜底，再兜底设计底图。
     const canvas = { width: 1080, height: 1440 }
     let stockAsset = null
     let backgroundSource = 'none'
@@ -322,16 +309,13 @@ router.post(
           const prompt = keywordToImagePrompt(subjectQuery)
           if (prompt) {
             const { buffer } = await pollinations.generateImage({ prompt, width: 1080, height: 1440 })
-            const aiImgDir = path.resolve(__dirname, '../../public/ai-images')
-            fs.mkdirSync(aiImgDir, { recursive: true })
-            const filename = `ai-shot-${Date.now()}.jpg`
-            fs.writeFileSync(path.join(aiImgDir, filename), buffer)
+            const dataUrl = encodeBufferToDataUrl(buffer, 'image/jpeg')
             stockAsset = {
               id: `ai-shot-${Date.now()}`,
               provider: 'ai',
               sourceName: 'AI 生成',
-              url: `/ai-images/${filename}`,
-              thumb: `/ai-images/${filename}`,
+              url: dataUrl,
+              thumb: dataUrl,
               photographer: 'AI 生成',
               license: 'AI 生成 · 可商用',
             }
@@ -340,6 +324,31 @@ router.post(
         }
       } catch (e) {
         console.warn('[inspire] one-shot AI 兜底失败：', e.message)
+      }
+    }
+
+    if (!stockAsset) {
+      // 设计底图兜底：保证一键成片始终有贴题背景（至少是主题色 + 几何的可用底图），
+      // 而不是空白或与主题无关的抽象渐变。
+      try {
+        const { generateDesignBackdrops } = await import('../lib/design-backdrop.js')
+        const backdrops = generateDesignBackdrops(subjectQuery, { count: 1 })
+        if (backdrops.length) {
+          const b = backdrops[0]
+          const dataUrl = encodeBufferToDataUrl(b.buffer, 'image/png')
+          stockAsset = {
+            id: `db-shot-${Date.now()}`,
+            provider: 'design',
+            sourceName: '设计底图',
+            url: dataUrl,
+            thumb: dataUrl,
+            photographer: '幻象工坊 · 设计库',
+            license: '设计底图 · 可商用',
+          }
+          backgroundSource = 'design'
+        }
+      } catch (e) {
+        console.warn('[inspire] one-shot 设计底图兜底失败：', e.message)
       }
     }
 

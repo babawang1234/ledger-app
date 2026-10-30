@@ -1,13 +1,6 @@
-import fs from 'fs'
-import path from 'path'
-import { fileURLToPath } from 'url'
-import { renderPoster } from './renderer.js'
 import { generateLayouts } from './layouts.js'
 import { TEMPLATE_CASES } from './template-cases.js'
 import { photoForTemplate } from './template-photos.js'
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url))
-const OUT_DIR = path.resolve(__dirname, '../../public/templates')
 
 const ALT_PALETTES = [
   ['#38d9f5', '#5b6cff', '#7c5cff'],
@@ -18,11 +11,11 @@ const ALT_PALETTES = [
 ]
 
 /**
- * 渲染灵感库案例海报 PNG。
- * 每个案例渲染主版式 + 一个换色换版式的 B 版，让关键词检索与「换一换」有足够内容。
+ * 渲染灵感库案例海报（仅生成图层数据，不落盘 PNG）。
+ * 模板缩略图直接使用远程摄影照片（Unsplash CDN 免商用），
+ * 彻底避免本地图片堆积占用磁盘；海报成品由前端 PosterCanvas 用 layers 实时渲染。
  */
 export async function renderTemplateCases() {
-  fs.mkdirSync(OUT_DIR, { recursive: true })
   const results = []
   const variantOrder = ['center', 'left', 'split', 'bold']
 
@@ -46,24 +39,16 @@ export async function renderTemplateCases() {
       const layout = layouts[variantMap[variant] ?? 0]
 
       const slug = c.name.replace(/[^\w\u4e00-\u9fa5-]+/g, '-')
-      const filename = `tpl-${slug}${isAlt ? '-alt' : ''}-photo.png`
-      const buf = await renderPoster({
-        width: c.canvas.width,
-        height: c.canvas.height,
-        background: layout.background,
-        layers: layout.layers,
-      })
-      fs.writeFileSync(path.join(OUT_DIR, filename), buf)
 
       results.push({
         slug: isAlt ? `${slug}-alt` : slug,
-        imageUrl: `/templates/${filename}`,
+        // 缩略图直接指向远程摄影照片，不再生成本地 PNG
+        imageUrl: stockAsset.url,
         layers: layout.layers,
         background: layout.background,
         feature: layout.feature,
         stockAsset,
       })
-      console.log(`[templates] 已渲染 ${c.name}${isAlt ? '（B 版）' : ''} → ${filename}`)
     }
   }
 

@@ -64,18 +64,22 @@ function adaptiveTitleSize(text, base = 0.092, min = 0.056) {
 export function generateLayouts({ content = {}, purpose = '', canvas, styleAnalysis, artwork, stockAsset }) {
   const { width, height } = canvas
   const palette = pickPalette(styleAnalysis)
-  const variants = [
+
+  // 关键：让 4 个方案在「照片使用方式」上完全差异化，而不是只在标题位置微调。
+  // photoVariants 分别对应：全幅沉浸 / 上下分栏 / 左右画册 / 杂志封面（色块拼贴）。
+  const photoVariants = [0, 1, 2, 3]
+  const fallbackVariants = [
     centerLayout,
     editorialLayout,
     splitLayout,
     boldLayout,
   ]
 
-  return variants.map((layout, index) => {
+  return photoVariants.map((variantIndex, index) => {
     const artSrc = artwork || createArtworkDataUrl({ palette: palette.colors, purpose, content, variant: index })
     const result = stockAsset?.url
-      ? photoLayout({ content, palette, width, height, artSrc, index, stockAsset })
-      : layout({ content, palette, width, height, artSrc, index })
+      ? photoLayout({ content, palette, width, height, artSrc, index: variantIndex, stockAsset })
+      : fallbackVariants[index]({ content, palette, width, height, artSrc, index })
     if (stockAsset?.photographer) {
       result.layers.push({
         type: 'shape', kind: 'rect', x: 0, y: 0.963, width: 1, height: 0.037,
@@ -110,35 +114,81 @@ export function generateLayouts({ content = {}, purpose = '', canvas, styleAnaly
 function photoLayout({ content, palette, artSrc, index, stockAsset }) {
   if (stockAsset?.templateStyle) return craftedPhotoLayout({ content, palette, artSrc, index, stockAsset })
   const white = '#fffaf2'
+  const dark = '#0a0e18'
   // 关键：优先用真实照片 URL（stockAsset.url），回退到艺术图 artSrc
   const photoSrc = stockAsset?.url || artSrc
+
+  // 四种明显差异化的照片版式：
+  //  0 全幅沉浸（照片铺满 + 底部渐变 + 大字标题）
+  //  1 上下分栏（上半照片 + 下半色块信息区）
+  //  2 左右画册（左侧照片 + 右侧文字分栏，杂志风）
+  //  3 杂志封面（顶部照片 + 大标题压在照片上 + 色块标签）
+  if (index === 1) return splitPhotoLayout({ content, palette, photoSrc })
+  if (index === 2) return editorialPhotoLayout({ content, palette, photoSrc })
+  if (index === 3) return magazinePhotoLayout({ content, palette, photoSrc })
+
+  // === 0 全幅沉浸 ===
   const photo = { type: 'image', src: photoSrc, x: 0, y: 0, width: 1, height: 1, fit: 'cover', zIndex: 0 }
-  // 压暗层 + 底部渐变 scrim：保证白字在任何照片上都可读
-  const dim = { type: 'shape', kind: 'rect', x: 0, y: 0, width: 1, height: 1, color: '#07101b', opacity: [0.52, 0.58, 0.55, 0.6][index], zIndex: 1 }
-  const bottomScrim = { type: 'shape', kind: 'rect', x: 0, y: 0.55, width: 1, height: 0.45, color: '#050a12', opacity: 0.45, zIndex: 2 }
-  const masthead = brand(content, 0.075, 0.045, 'left', true)
-  const titleLayouts = [
-    { x: 0.075, y: 0.68, size: 0.092, maxWidth: 0.84, align: 'left' },
-    { x: 0.08, y: 0.69, size: 0.082, maxWidth: 0.84, align: 'left' },
-    { x: 0.075, y: 0.72, size: 0.086, maxWidth: 0.84, align: 'left' },
-    { x: 0.5, y: 0.39, size: 0.105, maxWidth: 0.84, align: 'center' },
-  ]
-  const copy = titleLayouts[index]
-  const layers = [photo, dim, bottomScrim, masthead]
-  if (index === 1) {
-    layers.push({ type: 'shape', kind: 'rect', x: 0, y: 0.61, width: 1, height: 0.39, color: '#090c16', opacity: 0.93, zIndex: 8 })
-  } else {
-    layers.push(rule(palette, copy.align === 'center' ? 0.46 : 0.075, Math.max(0.16, copy.y - 0.07), 0.08))
-  }
-  layers.push(title(content, { ...copy, color: white }))
-  layers.push(subtitle(content, { x: copy.align === 'center' ? '50%' : copy.x, y: copy.y + 0.11, align: copy.align, color: 'rgba(255,250,242,.9)', maxWidth: 0.84 }))
-  layers.push(detail(content, { x: copy.align === 'center' ? '50%' : copy.x, y: copy.y + 0.18, align: copy.align, color: 'rgba(255,250,242,.72)', maxWidth: 0.82, size: 0.022 }))
-  layers.push(...cta(content, palette, { x: copy.align === 'center' ? 0.34 : 0.075, y: 0.9, w: copy.align === 'center' ? 0.32 : 0.29, h: 0.045 }))
+  const dim = { type: 'shape', kind: 'rect', x: 0, y: 0, width: 1, height: 1, color: dark, opacity: 0.5, zIndex: 1 }
+  const bottomScrim = { type: 'shape', kind: 'rect', x: 0, y: 0.52, width: 1, height: 0.48, color: '#050a12', opacity: 0.55, zIndex: 2 }
+  const masthead = brand(content, 0.075, 0.05, 'left', true)
+  const accent = { type: 'shape', kind: 'rect', x: 0.075, y: 0.62, width: 0.09, height: 0.006, color: palette.colors[2], zIndex: 12 }
+  const layers = [photo, dim, bottomScrim, masthead, accent]
+  layers.push(title(content, { x: 0.075, y: 0.66, size: 0.1, maxWidth: 0.85, align: 'left', color: white }))
+  layers.push(subtitle(content, { x: 0.075, y: 0.79, align: 'left', color: 'rgba(255,250,242,.9)', maxWidth: 0.85 }))
+  layers.push(detail(content, { x: 0.075, y: 0.855, align: 'left', color: 'rgba(255,250,242,.72)', maxWidth: 0.85, size: 0.021 }))
+  layers.push(...cta(content, palette, { x: 0.075, y: 0.925, w: 0.3, h: 0.045 }))
   return {
-    feature: ['电影感摄影主视觉', '影像分区 · 杂志标题', '全幅摄影 · 左对齐信息', '居中宣言 · 沉浸式影像'][index],
-    background: { color: '#090c16' },
+    feature: '全幅沉浸 · 电影感主视觉',
+    background: { color: dark },
     layers,
   }
+}
+
+// 上下分栏：照片占上半，下半是纯色信息区（白字深底），构图最清晰、可读性最强
+function splitPhotoLayout({ content, palette, photoSrc }) {
+  const photo = { type: 'image', src: photoSrc, x: 0, y: 0, width: 1, height: 0.56, fit: 'cover', zIndex: 0 }
+  const dim = { type: 'shape', kind: 'rect', x: 0, y: 0, width: 1, height: 0.56, color: '#05080f', opacity: 0.28, zIndex: 1 }
+  const infoBg = { type: 'shape', kind: 'rect', x: 0, y: 0.56, width: 1, height: 0.44, color: '#0e1220', zIndex: 2 }
+  const layers = [photo, dim, infoBg, brand(content, 0.075, 0.6, 'left', true)]
+  layers.push({ type: 'shape', kind: 'rect', x: 0.075, y: 0.665, width: 0.1, height: 0.005, color: palette.colors[1], zIndex: 12 })
+  layers.push(title(content, { x: 0.075, y: 0.69, size: 0.085, maxWidth: 0.85, color: '#fffdf4' }))
+  layers.push(subtitle(content, { x: 0.075, y: 0.8, color: 'rgba(255,255,255,.88)', maxWidth: 0.85, size: 0.028 }))
+  layers.push(detail(content, { x: 0.075, y: 0.86, color: 'rgba(255,255,255,.6)', maxWidth: 0.85, size: 0.02 }))
+  layers.push(...cta(content, palette, { x: 0.075, y: 0.925, w: 0.3, h: 0.045 }))
+  return { feature: '上下分栏 · 图文分离版', background: { color: '#0e1220' }, layers }
+}
+
+// 左右画册：左侧照片竖条 + 右侧文字分栏，杂志编辑风（浅色纸感）
+function editorialPhotoLayout({ content, palette, photoSrc }) {
+  const paper = '#f4f1ea'
+  const ink = '#1a1b18'
+  const photo = { type: 'image', src: photoSrc, x: 0, y: 0, width: 0.42, height: 1, fit: 'cover', zIndex: 0 }
+  const layers = [photo, { type: 'shape', kind: 'rect', x: 0.42, y: 0, width: 0.58, height: 1, color: paper, zIndex: 1 }]
+  layers.push({ type: 'shape', kind: 'rect', x: 0.47, y: 0.09, width: 0.08, height: 0.004, color: palette.colors[0], zIndex: 12 })
+  layers.push(brand(content, 0.47, 0.12, 'left', false))
+  layers.push(title(content, { x: 0.47, y: 0.22, size: 0.072, maxWidth: 0.48, color: ink }))
+  layers.push(subtitle(content, { x: 0.47, y: 0.42, color: '#4c4a43', maxWidth: 0.48, size: 0.027 }))
+  layers.push(detail(content, { x: 0.47, y: 0.52, color: '#6b6960', maxWidth: 0.48, size: 0.02 }))
+  layers.push(...cta(content, palette, { x: 0.47, y: 0.88, w: 0.3, h: 0.046 }))
+  return { feature: '左右画册 · 杂志编辑风', background: { color: paper }, layers }
+}
+
+// 杂志封面：顶部大照片 + 大字标题压在照片上 + 底部色块标签栏
+function magazinePhotoLayout({ content, palette, photoSrc }) {
+  const photo = { type: 'image', src: photoSrc, x: 0, y: 0, width: 1, height: 0.62, fit: 'cover', zIndex: 0 }
+  const dim = { type: 'shape', kind: 'rect', x: 0, y: 0, width: 1, height: 0.62, color: '#060912', opacity: 0.35, zIndex: 1 }
+  const tagBg = { type: 'shape', kind: 'rect', x: 0.075, y: 0.08, width: 0.24, height: 0.05, color: palette.colors[1], radius: 4, zIndex: 10 }
+  const tag = { type: 'text', text: content.brand || '专题', x: 0.09, y: 0.095, fontSize: 0.02, fontWeight: 700, color: '#10121a', zIndex: 11, maxWidth: 0.21 }
+  const titleY = 0.48
+  const layers = [photo, dim, tagBg, tag]
+  layers.push(title(content, { x: 0.075, y: titleY, size: 0.115, maxWidth: 0.85, color: '#ffffff', weight: 800, align: 'left' }))
+  layers.push({ type: 'shape', kind: 'rect', x: 0.075, y: 0.655, width: 1, height: 0.345, color: '#f6f3ec', zIndex: 2 })
+  layers.push({ type: 'shape', kind: 'rect', x: 0.075, y: 0.655, width: 0.08, height: 0.006, color: palette.colors[0], zIndex: 12 })
+  layers.push(subtitle(content, { x: 0.075, y: 0.7, color: '#3a3831', maxWidth: 0.85, size: 0.03 }))
+  layers.push(detail(content, { x: 0.075, y: 0.78, color: '#67655c', maxWidth: 0.85, size: 0.021 }))
+  layers.push(...cta(content, palette, { x: 0.075, y: 0.9, w: 0.3, h: 0.046 }))
+  return { feature: '杂志封面 · 大字报标题', background: { color: '#f6f3ec' }, layers }
 }
 
 function craftedPhotoLayout({ content, palette, artSrc, index = 0, stockAsset }) {

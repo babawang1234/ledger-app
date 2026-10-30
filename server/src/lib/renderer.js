@@ -224,10 +224,7 @@ async function drawImage(ctx, layer, w, h) {
       if (bytes.length > 20 * 1024 * 1024) throw new Error('素材超出 20 MB')
       img = await loadImage(bytes)
     } else {
-      const localSource = layer.localPath || (src.startsWith('/generated/')
-        ? path.resolve(__dirname, '../../public/generated', path.basename(src))
-        : src)
-      img = await loadImage(localSource)
+      img = await loadImage(resolveLocalSource(src, layer.localPath))
     }
   } catch {
     return // 图片加载失败则跳过该图层
@@ -260,6 +257,30 @@ async function drawImage(ctx, layer, w, h) {
   }
   ctx.drawImage(img, sx, sy, sw, sh, dx, dy, dw, dh)
   ctx.restore()
+}
+
+// 将站内相对路径（/ai-images/、/design-backdrops/、/generated/、/templates/、/uploads/、/exports/）
+// 解析为服务端磁盘绝对路径，确保 renderPoster 能真正加载本地生成的图片层。
+// 之前只处理了 /generated/，导致 AI 生图与设计底图作为背景时加载失败、海报背景空白。
+const LOCAL_PUBLIC_DIRS = {
+  'ai-images': path.resolve(__dirname, '../../public/ai-images'),
+  'design-backdrops': path.resolve(__dirname, '../../public/design-backdrops'),
+  'generated': path.resolve(__dirname, '../../public/generated'),
+  'templates': path.resolve(__dirname, '../../public/templates'),
+  'uploads': path.resolve(__dirname, '../../public/uploads'),
+  'exports': path.resolve(__dirname, '../../public/exports'),
+}
+
+function resolveLocalSource(src, localPath) {
+  if (localPath) return localPath
+  if (typeof src === 'string' && src.startsWith('/')) {
+    const [_, first, ...rest] = src.split('/')
+    const dir = LOCAL_PUBLIC_DIRS[first]
+    if (dir) return path.join(dir, ...rest)
+    // 兜底：当作相对 public 根处理
+    return path.resolve(__dirname, '../../public', src.slice(1))
+  }
+  return src
 }
 
 async function assertPublicImageUrl(value) {
