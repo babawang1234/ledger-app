@@ -1,12 +1,17 @@
-// 本地图库池：预置一批 Unsplash CDN 公开图片（无需 API Key、可商用、无需署名）
-// 用于在未配置 Pexels/Unsplash Key、且 Openverse 网络不可达时，作为图库检索的兜底数据源。
-// 图片来源：images.unsplash.com 公开 CDN 直链（Unsplash License，可免费商用）。
-// 每张图带 keywords（用于关键词匹配）和 category（分类）。
+// 本地图库池：预置一批 Unsplash / Pexels CDN 公开图片（无需 API Key、可商用、无需署名）。
+// 用于在未配置 Pexels/Unsplash Key、且 Openverse 等外部图库网络不可达时，作为图库检索的兜底数据源。
+// 图片来源：
+//   - images.unsplash.com 公开 CDN 直链（Unsplash License）
+//   - images.pexels.com 公开 CDN 直链（Pexels License，可免费商用、无需署名）
+// 每张图带 keywords（用于关键词匹配）、category（分类）和 source（图源）。
 
 const P = (id) => `https://images.unsplash.com/photo-${id}?w=800&q=80&fm=jpg&fit=crop`
 const PT = (id) => `https://images.unsplash.com/photo-${id}?w=400&q=75&fm=jpg&fit=crop`
+// Pexels CDN：images.pexels.com/photos/{id}/{slug}.jpeg —— slug 可省，用统一形式
+const PX = (id) => `https://images.pexels.com/photos/${id}/pexels-photo-${id}.jpeg?auto=compress&cs=tinysrgb&w=800`
+const PXT = (id) => `https://images.pexels.com/photos/${id}/pexels-photo-${id}.jpeg?auto=compress&cs=tinysrgb&w=400`
 
-// 每条：{ id, category, label, keywords: [...], w, h }
+// 每条：{ id, category, label, keywords: [...], w, h, source }
 const POOL = [
   // 咖啡 / 餐饮
   { id: '1495474472287-4d71bcdd2085', category: '咖啡', label: '咖啡', keywords: ['咖啡', 'coffee', '饮品', '咖啡馆', '饮料'], w: 1600, h: 1067 },
@@ -170,10 +175,57 @@ const POOL = [
   { id: '1547891654-e66ed7ebb968', category: '艺术', label: '艺术', keywords: ['艺术', '设计', '创意', '插画', '美学'], w: 1600, h: 1067 },
   { id: '1541961017774-22349e4a1262', category: '艺术', label: '艺术', keywords: ['艺术', '设计', '创意', '美学'], w: 1600, h: 1067 },
   // ==== 补充：情人节 / 爱情 / 浪漫 ====
-  // 内容已经过实际下载校验（Node fetch 200 + 视觉确认），确保与"情人节"语义一致
+  // Unsplash 图（已视觉校验内容正确）
   { id: '1518199266791-5375a83190b7', category: '情人节', label: '爱心光斑', keywords: ['情人节', '爱心', '浪漫', '爱情', '红心', '甜蜜', '表白'], w: 1600, h: 1067 },
   { id: '1518895949257-7621c3c786d7', category: '情人节', label: '粉色玫瑰', keywords: ['情人节', '玫瑰', '爱情', '浪漫', '花朵', '鲜花'], w: 1600, h: 1067 },
   { id: '1494972308805-463bc619d34e', category: '情人节', label: '红玫瑰花丛', keywords: ['情人节', '玫瑰', '爱情', '浪漫', '花朵', '红'], w: 1600, h: 1067 },
+  // Pexels 图（从 Pexels 官网真实抓取，内容已确认）
+  { id: '5713548', category: '情人节', label: '红心', keywords: ['情人节', '爱心', '红心', '浪漫', '爱情', '甜蜜'], w: 1600, h: 1067, source: 'pexels' },
+  { id: '5713717', category: '情人节', label: '红心形状', keywords: ['情人节', '爱心', '红心', '浪漫', '爱情'], w: 1600, h: 1067, source: 'pexels' },
+  { id: '6708760', category: '情人节', label: '红玫瑰', keywords: ['情人节', '玫瑰', '爱情', '浪漫', '花朵'], w: 1600, h: 1067, source: 'pexels' },
+  { id: '6478820', category: '情人节', label: '红色信封爱心', keywords: ['情人节', '爱心', '信封', '表白', '浪漫', '礼物'], w: 1600, h: 1067, source: 'pexels' },
+  { id: '5469264', category: '情人节', label: '心形糖果', keywords: ['情人节', '爱心', '糖果', '甜蜜', '浪漫', '礼物'], w: 1600, h: 1067, source: 'pexels' },
+  { id: '30761424', category: '情人节', label: '心形气球', keywords: ['情人节', '爱心', '气球', '浪漫', '爱情', '礼物'], w: 1600, h: 1067, source: 'pexels' },
+  { id: '6626091', category: '情人节', label: '情侣', keywords: ['情人节', '情侣', '爱情', '浪漫', '恋爱'], w: 1600, h: 1067, source: 'pexels' },
+  { id: '867463', category: '情人节', label: '红心海报', keywords: ['情人节', '爱心', '红心', '浪漫', '海报'], w: 1600, h: 1067, source: 'pexels' },
+  { id: '11133246', category: '情人节', label: '粉色心形', keywords: ['情人节', '爱心', '粉色', '浪漫', '爱情'], w: 1600, h: 1067, source: 'pexels' },
+  { id: '10834231', category: '情人节', label: '心形靠垫', keywords: ['情人节', '爱心', '浪漫', '爱情', '家居'], w: 1600, h: 1067, source: 'pexels' },
+
+  // ==== 补充：咖啡（Pexels 真实抓取）====
+  { id: '27860686', category: '咖啡', label: '咖啡杯', keywords: ['咖啡', '饮品', '咖啡杯', '饮料', '咖啡店'], w: 1600, h: 1067, source: 'pexels' },
+  { id: '13013307', category: '咖啡', label: '木桌咖啡', keywords: ['咖啡', '饮品', '咖啡店', '木桌'], w: 1600, h: 1067, source: 'pexels' },
+  { id: '997670', category: '咖啡', label: '黑咖啡杯', keywords: ['咖啡', '饮品', '黑咖啡'], w: 1600, h: 1067, source: 'pexels' },
+  { id: '26985929', category: '咖啡', label: '白杯黑咖啡', keywords: ['咖啡', '饮品', '咖啡杯'], w: 1600, h: 1067, source: 'pexels' },
+  { id: '19252265', category: '咖啡', label: '咖啡特写', keywords: ['咖啡', '饮品', '咖啡店'], w: 1600, h: 1067, source: 'pexels' },
+  { id: '2226091', category: '咖啡', label: '拿铁拉花', keywords: ['咖啡', '拿铁', '拉花', '饮品', '咖啡店'], w: 1600, h: 1067, source: 'pexels' },
+  { id: '8700714', category: '咖啡', label: '咖啡豆', keywords: ['咖啡', '咖啡豆', '饮品'], w: 1600, h: 1067, source: 'pexels' },
+  { id: '111159', category: '咖啡', label: '卡布奇诺', keywords: ['咖啡', '卡布奇诺', '饮品'], w: 1600, h: 1067, source: 'pexels' },
+  { id: '765162', category: '咖啡', label: '浓缩咖啡', keywords: ['咖啡', '浓缩', '饮品'], w: 1600, h: 1067, source: 'pexels' },
+  { id: '1235706', category: '咖啡', label: '倒咖啡', keywords: ['咖啡', '饮品', '咖啡杯'], w: 1600, h: 1067, source: 'pexels' },
+
+  // ==== 补充：美食（Pexels 真实抓取）====
+  { id: '7160695', category: '美食', label: '料理美食', keywords: ['美食', '食物', '餐饮', '料理', '吃'], w: 1600, h: 1067, source: 'pexels' },
+  { id: '19240003', category: '美食', label: '点心饮品', keywords: ['美食', '食物', '餐饮', '点心'], w: 1600, h: 1067, source: 'pexels' },
+  { id: '24866519', category: '美食', label: '沙拉', keywords: ['美食', '沙拉', '健康', '轻食', '蔬菜'], w: 1600, h: 1067, source: 'pexels' },
+
+  // ==== 补充：科技（Pexels 真实抓取）====
+  { id: '6913227', category: '科技', label: '平板电脑', keywords: ['科技', '平板', '数码', '电子', '设备'], w: 1600, h: 1067, source: 'pexels' },
+  { id: '7241421', category: '科技', label: 'VR设备', keywords: ['科技', 'VR', '虚拟现实', '数码', '智能'], w: 1600, h: 1067, source: 'pexels' },
+  { id: '18734876', category: '科技', label: '硬盘', keywords: ['科技', '硬盘', '硬件', '数码'], w: 1600, h: 1067, source: 'pexels' },
+  { id: '20877035', category: '科技', label: '3D打印', keywords: ['科技', '3D打印', '数码', '设备'], w: 1600, h: 1067, source: 'pexels' },
+  { id: '4373997', category: '科技', label: '光纤', keywords: ['科技', '光纤', '网络', '数码'], w: 1600, h: 1067, source: 'pexels' },
+  { id: '8439002', category: '科技', label: '科研', keywords: ['科技', '科研', '实验', '科学'], w: 1600, h: 1067, source: 'pexels' },
+  { id: '4955393', category: '科技', label: '显示器', keywords: ['科技', '显示器', '电脑', '数码'], w: 1600, h: 1067, source: 'pexels' },
+
+  // ==== 补充：自然（Pexels 真实抓取）====
+  { id: '12377231', category: '自然', label: '森林绿树', keywords: ['自然', '森林', '绿色', '环保', '环境', '树'], w: 1600, h: 1067, source: 'pexels' },
+  { id: '32228687', category: '自然', label: '森林阳光', keywords: ['自然', '森林', '环保', '阳光', '环境'], w: 1600, h: 1067, source: 'pexels' },
+  { id: '34021102', category: '自然', label: '湖景', keywords: ['自然', '湖', '风景', '山水', '环境'], w: 1600, h: 1067, source: 'pexels' },
+  { id: '32730210', category: '自然', label: '森林溪流', keywords: ['自然', '森林', '溪流', '环保', '水'], w: 1600, h: 1067, source: 'pexels' },
+  { id: '16767121', category: '自然', label: '湖畔树林', keywords: ['自然', '湖', '树', '风景', '环境'], w: 1600, h: 1067, source: 'pexels' },
+  { id: '32711479', category: '自然', label: '森林光', keywords: ['自然', '森林', '光', '环保', '环境'], w: 1600, h: 1067, source: 'pexels' },
+  { id: '13248795', category: '自然', label: '日落河景', keywords: ['自然', '日落', '河', '风景', '环境'], w: 1600, h: 1067, source: 'pexels' },
+  { id: '29159501', category: '自然', label: '森林野餐', keywords: ['自然', '森林', '野餐', '环保', '环境'], w: 1600, h: 1067, source: 'pexels' },
 ]
 
 export function getLocalImagePool() {
@@ -251,17 +303,18 @@ export function searchLocalPool(query, { limit = 24, seed = 0 } = {}) {
 }
 
 export function toPhoto(img) {
+  const isPexels = img.source === 'pexels'
   return {
     id: img.id,
     provider: 'local',
-    sourceName: 'Unsplash 图库',
+    sourceName: isPexels ? 'Pexels 图库' : 'Unsplash 图库',
     description: `${img.label} · ${img.category}`,
-    url: P(img.id),
-    thumb: PT(img.id),
-    photographer: 'Unsplash 摄影师',
-    profileUrl: `https://unsplash.com/photos/${img.id}`,
-    sourceUrl: `https://unsplash.com/photos/${img.id}`,
-    license: 'Unsplash License',
+    url: isPexels ? PX(img.id) : P(img.id),
+    thumb: isPexels ? PXT(img.id) : PT(img.id),
+    photographer: isPexels ? 'Pexels 摄影师' : 'Unsplash 摄影师',
+    profileUrl: isPexels ? `https://www.pexels.com/photo/${img.id}/` : `https://unsplash.com/photos/${img.id}`,
+    sourceUrl: isPexels ? `https://www.pexels.com/photo/${img.id}/` : `https://unsplash.com/photos/${img.id}`,
+    license: isPexels ? 'Pexels License' : 'Unsplash License',
     width: img.w,
     height: img.h,
   }

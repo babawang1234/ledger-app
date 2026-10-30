@@ -159,86 +159,127 @@ router.post(
 
 /**
  * AI 生成海报底图（双链路之一）
- * 输入关键词 → 万相文生图 → 下载到本地 → 返回可选的底图 URL 列表。
- * 未配置 DASHSCOPE_API_KEY 时返回明确提示（前端据此展示引导）。
+ * 输入关键词 → 真实 AI 文生图 → 下载到本地 → 返回可选的底图 URL 列表。
+ * 生成优先级：通义万相（DASHSCOPE_API_KEY）→ Pollinations（免 Key 免费兜底）→ 本地设计底图引擎（最后兜底）。
+ * 确保用户始终看到「AI 按关键词真实生图」，而非仅返回渐变/照片。
  */
 router.post(
   '/ai-background',
   asyncHandler(async (req, res) => {
     const keyword = String(req.body?.keyword || '').trim().slice(0, 100)
-    const count = Math.min(3, Math.max(1, Number(req.body?.count) || 3))
+    const count = Math.min(4, Math.max(1, Number(req.body?.count) || 3))
     if (!keyword) return res.status(400).json({ error: 'EMPTY_KEYWORD', message: '请提供关键词' })
-
-    const { WanxAdapter } = await import('../adapters/wanx.js')
-    const wanx = new WanxAdapter()
-    if (!wanx.available) {
-      // 无万相 Key 时，用本地设计底图引擎按关键词生成"虚拟设计背景"（而非返回摄影图）
-      const { generateDesignBackdrops } = await import('../lib/design-backdrop.js')
-      const dir = path.resolve(__dirname, '../../public/design-backdrops')
-      fs.mkdirSync(dir, { recursive: true })
-      const backdrops = generateDesignBackdrops(keyword, { count: Math.max(count, 4) })
-      const images = backdrops.map((b) => {
-        const filename = `ai-db-${Date.now()}-${b.variant}.png`
-        fs.writeFileSync(path.join(dir, filename), b.buffer)
-        return {
-          id: b.id,
-          provider: 'ai-design',
-          sourceName: 'AI 设计底图',
-          description: `${keyword} · AI 设计背景 ${b.variant + 1}`,
-          url: `/design-backdrops/${filename}`,
-          thumb: `/design-backdrops/${filename}`,
-          photographer: '幻象工坊 · AI 设计',
-          license: 'AI 设计底图 · 可商用',
-          kind: 'design',
-          width: b.width,
-          height: b.height,
-        }
-      })
-      return res.json({
-        images,
-        fallback: 'local-design',
-        message: images.length ? '' : '设计底图生成失败，请换关键词重试。',
-      })
-    }
 
     const aiImgDir = path.resolve(__dirname, '../../public/ai-images')
     fs.mkdirSync(aiImgDir, { recursive: true })
 
-    const images = []
-    const prompts = [
-      `${keyword}主题海报背景图，高级设计感，构图留白充足便于叠加标题，色彩协调，专业平面设计，高清，无文字无字母无logo，竖版构图`,
-      `${keyword}创意视觉背景，抽象艺术与主题融合，大气留白，现代简约风，高清，无文字无水印，竖版`,
-      `${keyword}氛围场景背景，质感光影，主题突出，适合海报留白排版，专业设计感，高清，无文字，竖版`,
-    ]
+    // 1) 尝试通义万相（真实 AI 生图，中文理解最好）
+    const { WanxAdapter } = await import('../adapters/wanx.js')
+    const wanx = new WanxAdapter()
+    if (wanx.available) {
+      const prompts = [
+        `${keyword}主题海报背景图，高级设计感，构图留白充足便于叠加标题，色彩协调，专业平面设计，高清，无文字无字母无logo，竖版构图`,
+        `${keyword}创意视觉背景，抽象艺术与主题融合，大气留白，现代简约风，高清，无文字无水印，竖版`,
+        `${keyword}氛围场景背景，质感光影，主题突出，适合海报留白排版，专业设计感，高清，无文字，竖版`,
+        `${keyword}氛围场景背景，质感光影，主题突出，适合海报留白排版，专业设计感，高清，无文字，竖版`,
+      ]
+      const images = []
+      for (let i = 0; i < count; i++) {
+        try {
+          const prompt = prompts[i % prompts.length]
+          const { url } = await wanx.generateImage({ prompt, width: 1080, height: 1920 })
+          const filename = `ai-${Date.now()}-${i}.png`
+          const res2 = await fetch(url, { signal: AbortSignal.timeout(30000) })
+          if (!res2.ok) throw new Error(`下载 AI 图失败 HTTP ${res2.status}`)
+          const bytes = Buffer.from(await res2.arrayBuffer())
+          fs.writeFileSync(path.join(aiImgDir, filename), bytes)
+          images.push({
+            id: `ai-${Date.now()}-${i}`,
+            provider: 'ai',
+            sourceName: 'AI 生成',
+            url: `/ai-images/${filename}`,
+            thumb: `/ai-images/${filename}`,
+            description: `${keyword} · AI 生成底图 ${i + 1}`,
+            photographer: 'AI 生成',
+            license: 'AI 生成 · 可商用',
+          })
+        } catch (e) {
+          console.warn(`[inspire] 万相生成第 ${i + 1} 张失败：${e.message}`)
+        }
+      }
+      if (images.length) {
+        return res.json({ images, provider: 'wanx', message: '' })
+      }
+      // 万相全部失败 → 继续降级 Pollinations
+    }
 
-    for (let i = 0; i < count; i++) {
-      try {
-        const prompt = prompts[i % prompts.length]
-        const { url } = await wanx.generateImage({ prompt, width: 1080, height: 1920 })
-        // 下载到本地，避免万相 24h URL 过期
-        const filename = `ai-${Date.now()}-${i}.png`
-        const res2 = await fetch(url, { signal: AbortSignal.timeout(30000) })
-        if (!res2.ok) throw new Error(`下载 AI 图失败 HTTP ${res2.status}`)
-        const bytes = Buffer.from(await res2.arrayBuffer())
-        fs.writeFileSync(path.join(aiImgDir, filename), bytes)
-        images.push({
-          id: `ai-${Date.now()}-${i}`,
-          provider: 'ai',
-          sourceName: 'AI 生成',
-          url: `/ai-images/${filename}`,
-          thumb: `/ai-images/${filename}`,
-          description: `${keyword} · AI 生成底图 ${i + 1}`,
-          photographer: 'AI 生成',
-          license: 'AI 生成 · 可商用',
+    // 2) 尝试 Pollinations（免 Key 免费真实生图，英文 prompt）
+    const { PollinationsAdapter } = await import('../adapters/pollinations.js')
+    const { buildImagePromptVariants } = await import('../lib/image-prompt.js')
+    const pollinations = new PollinationsAdapter()
+    if (pollinations.available) {
+      // Pollinations 匿名层限速 45 秒/张，多张会排队且大多触发 402。
+      // 策略：每次只生成 1 张（秒回），用户可连续点击"AI 生成"获取不同底图。
+      const prompts = buildImagePromptVariants(keyword, count)
+      const images = []
+      for (let i = 0; i < prompts.length; i++) {
+        try {
+          const { buffer } = await pollinations.generateImage({ prompt: prompts[i], width: 1080, height: 1440 })
+          const filename = `ai-p-${Date.now()}-${i}.jpg`
+          fs.writeFileSync(path.join(aiImgDir, filename), buffer)
+          images.push({
+            id: `ai-p-${Date.now()}-${i}`,
+            provider: 'ai',
+            sourceName: 'AI 生成',
+            url: `/ai-images/${filename}`,
+            thumb: `/ai-images/${filename}`,
+            description: `${keyword} · AI 生成底图 ${i + 1}`,
+            photographer: 'AI 生成',
+            license: 'AI 生成 · 可商用',
+          })
+          // 免费服务限速，第 2 张起大概率 402；生成 1 张后立即返回，不阻塞用户
+          break
+        } catch (e) {
+          console.warn(`[inspire] Pollinations 生成第 ${i + 1} 张失败：${e.message}`)
+          if (e.status === 402) break // 限流，停止后续请求
+        }
+      }
+      if (images.length) {
+        return res.json({
+          images,
+          provider: 'pollinations',
+          message: '已生成 1 张（免费 AI 生图服务限速，可再次点击「AI 生成」获取新的一张）',
         })
-      } catch (e) {
-        console.warn(`[inspire] AI 生成第 ${i + 1} 张失败：${e.message}`)
       }
     }
 
+    // 3) 最后兜底：本地设计底图引擎（保证有结果，但明确标注非 AI 生图）
+    const { generateDesignBackdrops } = await import('../lib/design-backdrop.js')
+    const dir = path.resolve(__dirname, '../../public/design-backdrops')
+    fs.mkdirSync(dir, { recursive: true })
+    const backdrops = generateDesignBackdrops(keyword, { count })
+    const images = backdrops.map((b) => {
+      const filename = `ai-db-${Date.now()}-${b.variant}.png`
+      fs.writeFileSync(path.join(dir, filename), b.buffer)
+      return {
+        id: b.id,
+        provider: 'ai-design',
+        sourceName: '设计底图',
+        description: `${keyword} · 设计背景 ${b.variant + 1}`,
+        url: `/design-backdrops/${filename}`,
+        thumb: `/design-backdrops/${filename}`,
+        photographer: '幻象工坊 · 设计库',
+        license: '设计底图 · 可商用',
+        kind: 'design',
+        width: b.width,
+        height: b.height,
+      }
+    })
     res.json({
       images,
-      message: images.length ? '' : 'AI 生成暂时失败，可稍后重试或切换「图库检索」链路。',
+      fallback: 'local-design',
+      provider: 'local-design',
+      message: 'AI 生图服务暂不可用，已返回设计底图（非 AI 生成）。',
     })
   })
 )

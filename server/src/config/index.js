@@ -35,6 +35,11 @@ export const config = {
       apiKey: process.env.DASHSCOPE_API_KEY || '',
       baseUrl: process.env.DASHSCOPE_BASE_URL || 'https://dashscope.aliyuncs.com/api/v1',
     },
+    pollinations: {
+      // 免 Key 免费生图服务，作为无万相 Key 时的真实 AI 生图兜底
+      enabled: process.env.POLLINATIONS_ENABLED !== 'false',
+      baseUrl: process.env.POLLINATIONS_BASE_URL || 'https://image.pollinations.ai',
+    },
   },
   defaults: {
     textModel: process.env.DEFAULT_TEXT_MODEL || 'deepseek-chat',

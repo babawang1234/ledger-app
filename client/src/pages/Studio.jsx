@@ -599,12 +599,12 @@ export default function Studio() {
     }
   }
 
-  /** AI 生成底图链路：关键词 → 万相文生图 → 返回可选的底图 */
+  /** AI 生成底图链路：关键词 → 真实 AI 文生图 → 返回可选的底图 */
   async function generateAiBackground(query = stockQuery, { silent = false } = {}) {
     const q = String(query || '').trim()
     if (!q) { setAiMessage('先输入关键词，AI 才能生成对应底图。'); return [] }
     setGeneratingAi(true)
-    setAiMessage('AI 正在理解关键词并生成底图，约需 20-40 秒…')
+    setAiMessage('AI 正在理解关键词并生成底图，约需 10-40 秒…')
     try {
       const ratio = '9:16'
       const data = await api.post('/inspire/ai-background', { keyword: q, ratio, count: 3 })
