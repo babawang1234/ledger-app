@@ -39,7 +39,8 @@ router.get('/search', asyncHandler(async (req, res) => {
         const prompt = keywordToImagePrompt(query)
         if (prompt) {
           const { buffer } = await pollinations.generateImage({ prompt, width: 1080, height: 1440 })
-          const variants = await deriveVariants(buffer, 3)
+          // 生成 6 张差异明显的变体，让用户有更多选择（而非只有 1~3 张）
+          const variants = await deriveVariants(buffer, 6)
           aiGeneratedPhotos = variants.map((v, i) => {
             // 图片以 data URL 直接返回，不落盘，避免占用本地磁盘
             const dataUrl = encodeBufferToDataUrl(v.buffer, 'image/jpeg')

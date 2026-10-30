@@ -1,6 +1,8 @@
-// 设计底图生成器：用 @napi-rs/canvas 现场生成"虚拟设计背景"（渐变/几何/光晕/网格/波浪等）。
+// 设计底图生成器：用 @napi-rs/canvas 现场生成"虚拟设计背景"。
 // 与真实摄影图区分——这是"设计师制作好的抽象设计底图"，用于海报留白排版。
 // 无需外部服务、无版权风险、可按关键词匹配主题色。
+// 本版本引入多种高级设计风格：流体渐变、孟菲斯拼贴、弥散光晕、噪点纹理、
+// 几何构图、网格大字、双色渐变、同心圆射线等，摆脱"纯渐变太简单"的观感。
 
 import { createCanvas } from '@napi-rs/canvas'
 
@@ -94,6 +96,29 @@ const THEME_COLORS = {
   '工业': ['#334155', '#64748b', '#0f172a'],
   '制造': ['#475569', '#cbd5e1', '#0f172a'],
   '车间': ['#475569', '#94a3b8', '#0f172a'],
+  // 茶 / 奶茶 → 暖棕青绿（茶香雅致，区别于咖啡的深棕）
+  '茶': ['#0f766e', '#a7f3d0', '#0c1a1a'],
+  '茶叶': ['#15803d', '#bbf7d0', '#052e16'],
+  '龙井': ['#16a34a', '#bbf7d0', '#052e16'],
+  '绿茶': ['#16a34a', '#bbf7d0', '#052e16'],
+  '红茶': ['#b45309', '#fcd34d', '#3f1d0a'],
+  '奶茶': ['#c77b30', '#f5d0a9', '#3a2412'],
+  '茶饮': ['#0f766e', '#a7f3d0', '#0c1a1a'],
+  // 火锅 / 美食 → 暖红橙（麻辣热烈）
+  '火锅': ['#dc2626', '#fb923c', '#450a0a'],
+  '麻辣': ['#dc2626', '#fb923c', '#450a0a'],
+  // 马拉松 / 跑步 → 活力橙红
+  '马拉松': ['#ea580c', '#fdba74', '#431407'],
+  '跑步': ['#ea580c', '#fdba74', '#431407'],
+  // 鲜花 → 粉紫
+  '鲜花': ['#db2777', '#f9a8d4', '#500724'],
+  '花': ['#ec4899', '#fbcfe8', '#500724'],
+  // 春节 / 新年 / 国风 → 红金
+  '春节': ['#dc2626', '#fbbf24', '#450a0a'],
+  '新年': ['#dc2626', '#fbbf24', '#450a0a'],
+  '国风': ['#b91c1c', '#fbbf24', '#1c1917'],
+  '端午': ['#16a34a', '#fde047', '#14532d'],
+  '中秋': ['#b45309', '#fde68a', '#1c1917'],
 }
 
 const DEFAULT_THEME = ['#7c5cff', '#38d9f5', '#1e1b4b']
@@ -123,128 +148,199 @@ function lerpColor(c1, c2, t) {
   return `#${[r, g, b].map((c) => c.toString(16).padStart(2, '0')).join('')}`
 }
 
-// 生成一张"设计底图"PNG，返回 Buffer
+// 生成一张"设计底图"PNG，返回 Buffer。
+// 用 variant 切换 8 种差异明显的高级设计风格。
 export function renderDesignBackdrop({ keyword, width = 1080, height = 1440, variant = 0 }) {
   const [c1, c2, c3] = pickTheme(keyword)
   const canvas = createCanvas(width, height)
   const ctx = canvas.getContext('2d')
 
-  // 基底深色
-  ctx.fillStyle = c3
-  ctx.fillRect(0, 0, width, height)
-
-  // 背景径向渐变光晕
-  const cx = width * (0.3 + (variant % 3) * 0.2)
-  const cy = height * (0.25 + (variant % 2) * 0.3)
-  const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, Math.max(width, height) * 0.8)
-  grad.addColorStop(0, rgba(c1, 0.85))
-  grad.addColorStop(0.5, rgba(lerpColor(c1, c2, 0.5), 0.5))
-  grad.addColorStop(1, rgba(c3, 0.95))
-  ctx.fillStyle = grad
-  ctx.fillRect(0, 0, width, height)
-
-  // 叠加第二光晕
-  const cx2 = width * (0.7 - (variant % 3) * 0.1)
-  const cy2 = height * (0.7 - (variant % 2) * 0.2)
-  const grad2 = ctx.createRadialGradient(cx2, cy2, 0, cx2, cy2, width * 0.6)
-  grad2.addColorStop(0, rgba(c2, 0.55))
-  grad2.addColorStop(1, rgba(c2, 0))
-  ctx.fillStyle = grad2
-  ctx.fillRect(0, 0, width, height)
-
-  // 根据 variant 绘制不同的几何装饰
-  drawDecoration(ctx, width, height, c1, c2, variant)
-
-  // 细微噪点增加质感
-  ctx.globalAlpha = 0.04
-  for (let i = 0; i < 400; i++) {
-    ctx.fillStyle = Math.random() > 0.5 ? '#ffffff' : '#000000'
-    ctx.fillRect(Math.random() * width, Math.random() * height, 1.5, 1.5)
+  const style = variant % 8
+  switch (style) {
+    case 0: renderFluidGradient(ctx, width, height, c1, c2, c3); break
+    case 1: renderMemphis(ctx, width, height, c1, c2, c3); break
+    case 2: renderDiffuseGlow(ctx, width, height, c1, c2, c3); break
+    case 3: renderGeometric(ctx, width, height, c1, c2, c3); break
+    case 4: renderDiagonal(ctx, width, height, c1, c2, c3); break
+    case 5: renderConcentric(ctx, width, height, c1, c2, c3); break
+    case 6: renderDuotone(ctx, width, height, c1, c2, c3); break
+    case 7: renderAurora(ctx, width, height, c1, c2, c3); break
   }
-  ctx.globalAlpha = 1
+
+  // 统一叠加细微噪点，增加质感
+  addGrain(ctx, width, height, 0.035)
 
   return canvas.toBuffer('image/png')
 }
 
-function drawDecoration(ctx, w, h, c1, c2, variant) {
-  const type = variant % 6
+// —— 8 种设计风格 ——
+
+// 0 流体渐变：多层柔和径向光晕，高级弥散
+function renderFluidGradient(ctx, w, h, c1, c2, c3) {
+  ctx.fillStyle = c3
+  ctx.fillRect(0, 0, w, h)
+  const blobs = [
+    { x: 0.28, y: 0.24, r: 0.75, c: c1, a: 0.9 },
+    { x: 0.76, y: 0.42, r: 0.7, c: c2, a: 0.7 },
+    { x: 0.35, y: 0.78, r: 0.7, c: lerpColor(c1, c2, 0.4), a: 0.65 },
+    { x: 0.72, y: 0.85, r: 0.5, c: c1, a: 0.4 },
+  ]
+  for (const b of blobs) {
+    const r = Math.max(w, h) * b.r
+    const g = ctx.createRadialGradient(w * b.x, h * b.y, 0, w * b.x, h * b.y, r)
+    g.addColorStop(0, rgba(b.c, b.a))
+    g.addColorStop(1, rgba(b.c, 0))
+    ctx.fillStyle = g
+    ctx.fillRect(0, 0, w, h)
+  }
+}
+
+// 1 孟菲斯拼贴：色块 + 圆点 + 三角 + 曲线，活泼设计感
+function renderMemphis(ctx, w, h, c1, c2, c3) {
+  ctx.fillStyle = c3
+  ctx.fillRect(0, 0, w, h)
+  // 大色块
+  ctx.fillStyle = rgba(c1, 0.9)
+  ctx.fillRect(0, 0, w * 0.42, h * 0.55)
+  ctx.fillStyle = rgba(c2, 0.75)
+  ctx.fillRect(w * 0.62, h * 0.18, w * 0.38, h * 0.4)
+  // 圆点
+  for (const [px, py, pr, pc] of [
+    [0.55, 0.12, 0.06, c1], [0.85, 0.08, 0.035, '#ffffff'],
+    [0.18, 0.68, 0.05, c2], [0.48, 0.82, 0.04, '#ffffff'],
+  ]) {
+    ctx.beginPath(); ctx.arc(w * px, h * py, w * pr, 0, Math.PI * 2)
+    ctx.fillStyle = rgba(pc, 0.9); ctx.fill()
+  }
+  // 波浪曲线
+  ctx.strokeStyle = rgba('#ffffff', 0.7)
+  ctx.lineWidth = Math.max(4, w * 0.01)
+  ctx.beginPath()
+  for (let x = 0; x <= w; x += 8) ctx.lineTo(x, h * 0.7 + Math.sin(x / 90) * h * 0.06)
+  ctx.stroke()
+  // 三角
+  ctx.fillStyle = rgba(c1, 0.85)
+  ctx.beginPath(); ctx.moveTo(w * 0.8, h * 0.7); ctx.lineTo(w * 0.98, h * 0.7); ctx.lineTo(w * 0.89, h * 0.5); ctx.closePath(); ctx.fill()
+}
+
+// 2 弥散光晕：大面积柔和光斑，梦幻
+function renderDiffuseGlow(ctx, w, h, c1, c2, c3) {
+  ctx.fillStyle = c3
+  ctx.fillRect(0, 0, w, h)
+  const glows = [
+    { x: 0.5, y: 0.35, r: 0.9, c: c1, a: 0.55 },
+    { x: 0.2, y: 0.7, r: 0.6, c: c2, a: 0.4 },
+    { x: 0.82, y: 0.65, r: 0.55, c: c1, a: 0.35 },
+    { x: 0.45, y: 0.15, r: 0.5, c: c2, a: 0.3 },
+  ]
+  for (const g of glows) {
+    const r = Math.max(w, h) * g.r
+    const gr = ctx.createRadialGradient(w * g.x, h * g.y, 0, w * g.x, h * g.y, r)
+    gr.addColorStop(0, rgba(g.c, g.a))
+    gr.addColorStop(1, rgba(g.c, 0))
+    ctx.fillStyle = gr; ctx.fillRect(0, 0, w, h)
+  }
+}
+
+// 3 几何构图：大圆环 + 交叠矩形 + 对角线
+function renderGeometric(ctx, w, h, c1, c2, c3) {
+  ctx.fillStyle = c3
+  ctx.fillRect(0, 0, w, h)
+  // 同心圆环
+  for (let i = 0; i < 5; i++) {
+    const r = h * (0.14 + i * 0.1)
+    ctx.beginPath(); ctx.arc(w * 0.5, h * 0.42, r, 0, Math.PI * 2)
+    ctx.strokeStyle = rgba(i % 2 ? c1 : c2, 0.5 - i * 0.07)
+    ctx.lineWidth = 2 + i * 1.2
+    ctx.stroke()
+  }
+  // 交叠半透明矩形
+  ctx.globalAlpha = 0.5
+  ctx.fillStyle = c1
+  ctx.fillRect(w * 0.08, h * 0.6, w * 0.3, h * 0.28)
+  ctx.globalAlpha = 0.4
+  ctx.fillStyle = c2
+  ctx.fillRect(w * 0.28, h * 0.68, w * 0.32, h * 0.28)
+  ctx.globalAlpha = 1
+  // 对角线
+  ctx.strokeStyle = rgba('#ffffff', 0.2); ctx.lineWidth = w * 0.006
+  ctx.beginPath(); ctx.moveTo(0, h * 0.85); ctx.lineTo(w, h * 0.45); ctx.stroke()
+}
+
+// 4 对角分割 + 斜纹
+function renderDiagonal(ctx, w, h, c1, c2, c3) {
+  ctx.fillStyle = c3; ctx.fillRect(0, 0, w, h)
   ctx.save()
-  switch (type) {
-    case 0: // 大圆环
-      for (let i = 0; i < 4; i++) {
-        const r = h * (0.2 + i * 0.12)
-        ctx.beginPath()
-        ctx.arc(w * 0.5, h * 0.45, r, 0, Math.PI * 2)
-        ctx.strokeStyle = rgba(c2, 0.25 - i * 0.04)
-        ctx.lineWidth = 2 + i
-        ctx.stroke()
-      }
-      break
-    case 1: // 对角线条纹
-      ctx.save()
-      ctx.globalAlpha = 0.12
-      for (let x = -h; x < w + h; x += 60) {
-        ctx.beginPath()
-        ctx.moveTo(x, 0)
-        ctx.lineTo(x + h, h)
-        ctx.strokeStyle = '#ffffff'
-        ctx.lineWidth = 2
-        ctx.stroke()
-      }
-      ctx.restore()
-      break
-    case 2: // 网格
-      ctx.globalAlpha = 0.1
-      ctx.strokeStyle = '#ffffff'
-      ctx.lineWidth = 1
-      for (let x = 0; x < w; x += 60) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, h); ctx.stroke() }
-      for (let y = 0; y < h; y += 60) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke() }
-      break
-    case 3: // 波浪
-      ctx.globalAlpha = 0.2
-      for (let row = 0; row < 6; row++) {
-        const y = h * (0.5 + row * 0.1)
-        ctx.beginPath()
-        ctx.moveTo(0, y)
-        for (let x = 0; x <= w; x += 20) {
-          ctx.lineTo(x, y + Math.sin(x / 80 + row) * 40)
-        }
-        ctx.strokeStyle = row % 2 ? rgba(c2, 0.5) : '#ffffff'
-        ctx.lineWidth = 2.5
-        ctx.stroke()
-      }
-      break
-    case 4: // 大三角几何
-      ctx.globalAlpha = 0.15
-      ctx.fillStyle = '#ffffff'
-      ctx.beginPath()
-      ctx.moveTo(w * 0.5, h * 0.1)
-      ctx.lineTo(w * 0.95, h * 0.9)
-      ctx.lineTo(w * 0.05, h * 0.9)
-      ctx.closePath()
-      ctx.fill()
-      ctx.globalAlpha = 0.12
-      ctx.fillStyle = c2
-      ctx.beginPath()
-      ctx.moveTo(w * 0.5, h * 0.25)
-      ctx.lineTo(w * 0.85, h * 0.85)
-      ctx.lineTo(w * 0.15, h * 0.85)
-      ctx.closePath()
-      ctx.fill()
-      break
-    case 5: // 光点散布
-      ctx.globalAlpha = 0.6
-      for (let i = 0; i < 30; i++) {
-        const r = 2 + Math.random() * 8
-        ctx.beginPath()
-        ctx.arc(Math.random() * w, Math.random() * h, r, 0, Math.PI * 2)
-        ctx.fillStyle = Math.random() > 0.5 ? '#ffffff' : c2
-        ctx.globalAlpha = 0.2 + Math.random() * 0.4
-        ctx.fill()
-      }
-      break
+  ctx.rotate(-0.35)
+  ctx.fillStyle = c1
+  ctx.fillRect(-w * 0.3, h * 0.1, w * 1.4, h * 0.3)
+  ctx.fillStyle = c2
+  ctx.fillRect(-w * 0.3, h * 0.55, w * 1.4, h * 0.28)
+  ctx.restore()
+  // 细斜纹
+  ctx.save(); ctx.globalAlpha = 0.15; ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 2
+  for (let x = -h; x < w + h; x += 40) {
+    ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x + h, h); ctx.stroke()
   }
   ctx.restore()
+}
+
+// 5 同心圆射线：从中心扩散的弧线，科技感
+function renderConcentric(ctx, w, h, c1, c2, c3) {
+  ctx.fillStyle = c3; ctx.fillRect(0, 0, w, h)
+  const cx = w * 0.5, cy = h * 0.42
+  for (let i = 0; i < 14; i++) {
+    const r = 20 + i * (Math.max(w, h) * 0.045)
+    ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2)
+    ctx.strokeStyle = rgba(i % 2 ? c1 : c2, Math.max(0.12, 0.55 - i * 0.03))
+    ctx.lineWidth = 1.5 + (i % 3)
+    ctx.stroke()
+  }
+  // 中心光点
+  const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, w * 0.3)
+  g.addColorStop(0, rgba(c1, 0.7)); g.addColorStop(1, rgba(c1, 0))
+  ctx.fillStyle = g; ctx.fillRect(0, 0, w, h)
+}
+
+// 6 双色调：上下两个大色域硬切 + 过渡带
+function renderDuotone(ctx, w, h, c1, c2, c3) {
+  ctx.fillStyle = c3; ctx.fillRect(0, 0, w, h)
+  const g = ctx.createLinearGradient(0, 0, w, h)
+  g.addColorStop(0, c1); g.addColorStop(0.5, lerpColor(c1, c2, 0.5)); g.addColorStop(1, c3)
+  ctx.fillStyle = g; ctx.fillRect(0, 0, w, h)
+  // 半透明圆形叠加
+  ctx.globalAlpha = 0.3
+  ctx.fillStyle = '#ffffff'
+  ctx.beginPath(); ctx.arc(w * 0.72, h * 0.3, w * 0.28, 0, Math.PI * 2); ctx.fill()
+  ctx.globalAlpha = 0.22
+  ctx.beginPath(); ctx.arc(w * 0.25, h * 0.72, w * 0.24, 0, Math.PI * 2); ctx.fill()
+  ctx.globalAlpha = 1
+}
+
+// 7 极光：多层弯曲色带，梦幻流线
+function renderAurora(ctx, w, h, c1, c2, c3) {
+  ctx.fillStyle = c3; ctx.fillRect(0, 0, w, h)
+  for (let band = 0; band < 4; band++) {
+    const yBase = h * (0.2 + band * 0.18)
+    ctx.beginPath()
+    for (let x = 0; x <= w; x += 6) {
+      const y = yBase + Math.sin(x / (140 + band * 30) + band * 1.5) * h * 0.06
+      x === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y)
+    }
+    ctx.strokeStyle = rgba(band % 2 ? c1 : c2, 0.5 - band * 0.09)
+    ctx.lineWidth = 18 - band * 2
+    ctx.stroke()
+  }
+}
+
+// 噪点纹理
+function addGrain(ctx, w, h, alpha) {
+  ctx.globalAlpha = alpha
+  for (let i = 0; i < 500; i++) {
+    ctx.fillStyle = Math.random() > 0.5 ? '#ffffff' : '#000000'
+    ctx.fillRect(Math.random() * w, Math.random() * h, 1.5, 1.5)
+  }
+  ctx.globalAlpha = 1
 }
 
 // 生成多张设计底图（不同 variant）

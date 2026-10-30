@@ -253,6 +253,87 @@ const POOL = [
   { id: '37125625', category: '工厂', label: '蓝天下的工业厂房', keywords: ['工厂', '工业', '厂房', '排放', '制造'], w: 1600, h: 1067, source: 'pexels' },
   { id: '6754764', category: '工厂', label: '工业建筑航拍', keywords: ['工厂', '工业', '建筑', '厂房', '航拍'], w: 1600, h: 1067, source: 'pexels' },
   { id: '3732951', category: '工厂', label: '工业区航拍', keywords: ['工厂', '工业', '区域', '厂房', '制造'], w: 1600, h: 1067, source: 'pexels' },
+
+  // ==== 补充：茶 / 茶叶（Pexels 真实抓取，内容已确认）====
+  { id: '11285384', category: '茶', label: '窗边茶杯', keywords: ['茶', '茶叶', '茶杯', '喝茶', '茶饮', '龙井', '绿茶'], w: 1600, h: 1067, source: 'pexels' },
+  { id: '17286803', category: '茶', label: '倒茶', keywords: ['茶', '茶叶', '倒茶', '茶壶', '喝茶', '茶饮'], w: 1600, h: 1067, source: 'pexels' },
+  { id: '38410813', category: '茶', label: '热茶托盘', keywords: ['茶', '茶叶', '热茶', '茶杯', '喝茶', '茶饮'], w: 1600, h: 1067, source: 'pexels' },
+  { id: '9132518', category: '茶', label: '玻璃杯茶', keywords: ['茶', '茶叶', '茶杯', '喝茶', '饮品', '茶饮'], w: 1600, h: 1067, source: 'pexels' },
+  { id: '10258207', category: '茶', label: '茶壶茶杯', keywords: ['茶', '茶叶', '茶壶', '茶杯', '茶具', '喝茶'], w: 1600, h: 1067, source: 'pexels' },
+  { id: '5946807', category: '茶', label: '倒红茶', keywords: ['茶', '茶叶', '红茶', '倒茶', '喝茶', '茶饮'], w: 1600, h: 1067, source: 'pexels' },
+  { id: '14668682', category: '茶', label: '倒茶特写', keywords: ['茶', '茶叶', '倒茶', '茶具', '喝茶'], w: 1600, h: 1067, source: 'pexels' },
+  { id: '12698360', category: '茶', label: '茶杯茶壶', keywords: ['茶', '茶叶', '茶杯', '茶壶', '茶具'], w: 1600, h: 1067, source: 'pexels' },
+  { id: '6694154', category: '茶', label: '草本茶', keywords: ['茶', '茶叶', '草本', '健康', '喝茶'], w: 1600, h: 1067, source: 'pexels' },
+  { id: '35480225', category: '茶', label: '节日茶杯', keywords: ['茶', '茶叶', '茶杯', '节日', '喝茶'], w: 1600, h: 1067, source: 'pexels' },
+  { id: '31474385', category: '茶', label: '玻璃茶壶', keywords: ['茶', '茶叶', '茶壶', '花草茶', '喝茶'], w: 1600, h: 1067, source: 'pexels' },
+  { id: '35650189', category: '茶', label: '雪景热茶', keywords: ['茶', '茶叶', '热茶', '冬天', '雪', '喝茶'], w: 1600, h: 1067, source: 'pexels' },
+
+  // ==== 补充：奶茶 / 茶饮（Pexels 真实抓取）====
+  { id: '9271564', category: '奶茶', label: '木桌奶茶', keywords: ['奶茶', '茶饮', '饮品', '饮料', '牛奶茶'], w: 1600, h: 1067, source: 'pexels' },
+  { id: '6412836', category: '奶茶', label: '手拿奶茶', keywords: ['奶茶', '茶饮', '饮品', '饮料'], w: 1600, h: 1067, source: 'pexels' },
+  { id: '34511977', category: '奶茶', label: '冰珍珠奶茶', keywords: ['奶茶', '珍珠奶茶', '茶饮', '饮品', '饮料', '波霸'], w: 1600, h: 1067, source: 'pexels' },
+  { id: '11160112', category: '奶茶', label: '珍珠果昔', keywords: ['奶茶', '珍珠', '茶饮', '饮品', '饮料'], w: 1600, h: 1067, source: 'pexels' },
+  { id: '6412839', category: '奶茶', label: '手持奶茶杯', keywords: ['奶茶', '茶饮', '饮品', '饮料'], w: 1600, h: 1067, source: 'pexels' },
+  { id: '32927743', category: '奶茶', label: '木桌珍珠奶茶', keywords: ['奶茶', '珍珠奶茶', '茶饮', '饮品', '波霸'], w: 1600, h: 1067, source: 'pexels' },
+  { id: '35727299', category: '奶茶', label: '奶盖奶茶', keywords: ['奶茶', '奶盖', '茶饮', '饮品', '饮料'], w: 1600, h: 1067, source: 'pexels' },
+  { id: '35137078', category: '奶茶', label: '阳光冰奶茶', keywords: ['奶茶', '冰奶茶', '茶饮', '饮品', '饮料'], w: 1600, h: 1067, source: 'pexels' },
+  { id: '12666754', category: '奶茶', label: '珍珠奶茶杯', keywords: ['奶茶', '珍珠奶茶', '茶饮', '饮品', '波霸'], w: 1600, h: 1067, source: 'pexels' },
+  { id: '27126830', category: '奶茶', label: '奶茶特写', keywords: ['奶茶', '茶饮', '饮品', '饮料'], w: 1600, h: 1067, source: 'pexels' },
+
+  // ==== 补充：火锅 / 美食（Pexels 真实抓取）====
+  { id: '30915727', category: '火锅', label: '中式火锅', keywords: ['火锅', '美食', '餐饮', '料理', '麻辣'], w: 1600, h: 1067, source: 'pexels' },
+  { id: '29479440', category: '火锅', label: '火锅食材', keywords: ['火锅', '美食', '餐饮', '料理', '食材'], w: 1600, h: 1067, source: 'pexels' },
+  { id: '29479438', category: '火锅', label: '美味火锅', keywords: ['火锅', '美食', '餐饮', '料理'], w: 1600, h: 1067, source: 'pexels' },
+  { id: '29479439', category: '火锅', label: '亚洲火锅', keywords: ['火锅', '美食', '餐饮', '料理'], w: 1600, h: 1067, source: 'pexels' },
+  { id: '37172939', category: '火锅', label: '木桌火锅', keywords: ['火锅', '美食', '餐饮', '料理', '木桌'], w: 1600, h: 1067, source: 'pexels' },
+  { id: '11089809', category: '火锅', label: '锅中食材', keywords: ['火锅', '美食', '烹饪', '餐饮', '汤'], w: 1600, h: 1067, source: 'pexels' },
+  { id: '6063231', category: '火锅', label: '蔬菜汤', keywords: ['火锅', '美食', '汤', '餐饮', '蔬菜'], w: 1600, h: 1067, source: 'pexels' },
+  { id: '8178437', category: '火锅', label: '陶锅料理', keywords: ['火锅', '美食', '料理', '餐饮', '陶锅'], w: 1600, h: 1067, source: 'pexels' },
+
+  // ==== 补充：马拉松 / 跑步（Pexels 真实抓取）====
+  { id: '29840319', category: '马拉松', label: '马拉松选手', keywords: ['马拉松', '跑步', '运动', '比赛', '健身', '体育'], w: 1600, h: 1067, source: 'pexels' },
+  { id: '28907576', category: '马拉松', label: '城市马拉松', keywords: ['马拉松', '跑步', '运动', '比赛', '城市', '体育'], w: 1600, h: 1067, source: 'pexels' },
+  { id: '35388268', category: '马拉松', label: '山路马拉松', keywords: ['马拉松', '跑步', '运动', '山路', '体育'], w: 1600, h: 1067, source: 'pexels' },
+  { id: '29151596', category: '马拉松', label: '街头马拉松', keywords: ['马拉松', '跑步', '运动', '街头', '比赛'], w: 1600, h: 1067, source: 'pexels' },
+  { id: '10168171', category: '马拉松', label: '跑步剪影', keywords: ['马拉松', '跑步', '运动', '剪影', '体育'], w: 1600, h: 1067, source: 'pexels' },
+  { id: '29840338', category: '马拉松', label: '晨跑比赛', keywords: ['马拉松', '跑步', '运动', '比赛', '晨跑'], w: 1600, h: 1067, source: 'pexels' },
+  { id: '10226364', category: '马拉松', label: '公路跑步', keywords: ['马拉松', '跑步', '运动', '公路', '体育'], w: 1600, h: 1067, source: 'pexels' },
+  { id: '28907540', category: '马拉松', label: '悉尼马拉松', keywords: ['马拉松', '跑步', '运动', '城市', '比赛'], w: 1600, h: 1067, source: 'pexels' },
+  { id: '18521752', category: '马拉松', label: '跳跃马拉松', keywords: ['马拉松', '跑步', '运动', '跳跃', '体育'], w: 1600, h: 1067, source: 'pexels' },
+  { id: '36609323', category: '马拉松', label: '巴塞罗那马拉松', keywords: ['马拉松', '跑步', '运动', '比赛', '城市'], w: 1600, h: 1067, source: 'pexels' },
+  { id: '2526889', category: '马拉松', label: '跑步者', keywords: ['马拉松', '跑步', '运动', '体育', '健身'], w: 1600, h: 1067, source: 'pexels' },
+  { id: '33608349', category: '马拉松', label: '冲线时刻', keywords: ['马拉松', '跑步', '终点', '运动', '比赛'], w: 1600, h: 1067, source: 'pexels' },
+
+  // ==== 补充：鲜花 / 花朵（Pexels 真实抓取）====
+  { id: '40234150', category: '鲜花', label: '鲜花', keywords: ['鲜花', '花', '花朵', '玫瑰', '自然'], w: 1600, h: 1067, source: 'pexels' },
+  { id: '38007128', category: '鲜花', label: '花朵', keywords: ['鲜花', '花', '花朵', '自然', '植物'], w: 1600, h: 1067, source: 'pexels' },
+  { id: '31099775', category: '鲜花', label: '鲜花特写', keywords: ['鲜花', '花', '花朵', '自然'], w: 1600, h: 1067, source: 'pexels' },
+  { id: '37335894', category: '鲜花', label: '花束', keywords: ['鲜花', '花', '花束', '花朵', '礼物'], w: 1600, h: 1067, source: 'pexels' },
+  { id: '19325010', category: '鲜花', label: '花朵', keywords: ['鲜花', '花', '花朵', '自然'], w: 1600, h: 1067, source: 'pexels' },
+  { id: '11554084', category: '鲜花', label: '鲜花', keywords: ['鲜花', '花', '花朵', '玫瑰'], w: 1600, h: 1067, source: 'pexels' },
+  { id: '12220521', category: '鲜花', label: '花朵', keywords: ['鲜花', '花', '花朵', '自然'], w: 1600, h: 1067, source: 'pexels' },
+  { id: '6702059', category: '鲜花', label: '花', keywords: ['鲜花', '花', '花朵', '自然'], w: 1600, h: 1067, source: 'pexels' },
+  { id: '28279006', category: '鲜花', label: '鲜花', keywords: ['鲜花', '花', '花朵', '植物'], w: 1600, h: 1067, source: 'pexels' },
+  { id: '35802554', category: '鲜花', label: '花朵', keywords: ['鲜花', '花', '花朵', '自然'], w: 1600, h: 1067, source: 'pexels' },
+  { id: '7948148', category: '鲜花', label: '鲜花', keywords: ['鲜花', '花', '花朵', '玫瑰', '自然'], w: 1600, h: 1067, source: 'pexels' },
+  { id: '12373597', category: '鲜花', label: '花朵', keywords: ['鲜花', '花', '花朵', '植物'], w: 1600, h: 1067, source: 'pexels' },
+
+  // ==== 补充：新年 / 春节 / 灯笼（Pexels 真实抓取）====
+  { id: '19121466', category: '春节', label: '纸灯笼', keywords: ['春节', '新年', '灯笼', '节日', '中国传统', '国风'], w: 1600, h: 1067, source: 'pexels' },
+  { id: '20006359', category: '春节', label: '传统装饰', keywords: ['春节', '新年', '传统', '节日', '国风'], w: 1600, h: 1067, source: 'pexels' },
+  { id: '34443046', category: '春节', label: '舞狮表演', keywords: ['春节', '新年', '舞狮', '节日', '中国传统'], w: 1600, h: 1067, source: 'pexels' },
+  { id: '5982949', category: '春节', label: '红灯笼', keywords: ['春节', '新年', '灯笼', '节日', '红'], w: 1600, h: 1067, source: 'pexels' },
+  { id: '7364211', category: '春节', label: '红色装饰', keywords: ['春节', '新年', '装饰', '节日', '红', '国风'], w: 1600, h: 1067, source: 'pexels' },
+  { id: '29715852', category: '春节', label: '蓝天灯笼', keywords: ['春节', '新年', '灯笼', '节日', '国风'], w: 1600, h: 1067, source: 'pexels' },
+  { id: '14512855', category: '春节', label: '柱间灯笼', keywords: ['春节', '新年', '灯笼', '节日', '中国传统'], w: 1600, h: 1067, source: 'pexels' },
+  { id: '30918012', category: '春节', label: '新春横幅', keywords: ['春节', '新年', '横幅', '节日', '国风'], w: 1600, h: 1067, source: 'pexels' },
+  { id: '38712589', category: '春节', label: '户外灯笼', keywords: ['春节', '新年', '灯笼', '节日', '红'], w: 1600, h: 1067, source: 'pexels' },
+  { id: '19938787', category: '春节', label: '红灯笼串', keywords: ['春节', '新年', '灯笼', '节日', '红'], w: 1600, h: 1067, source: 'pexels' },
+  { id: '30125651', category: '春节', label: '新春装饰红果', keywords: ['春节', '新年', '装饰', '节日', '红果'], w: 1600, h: 1067, source: 'pexels' },
+  { id: '37272344', category: '春节', label: '夜间灯笼', keywords: ['春节', '新年', '灯笼', '夜晚', '节日'], w: 1600, h: 1067, source: 'pexels' },
+  { id: '16133738', category: '春节', label: '天花板灯笼', keywords: ['春节', '新年', '灯笼', '节日', '红'], w: 1600, h: 1067, source: 'pexels' },
+  { id: '36692248', category: '春节', label: '春联书法', keywords: ['春节', '新年', '春联', '书法', '国风'], w: 1600, h: 1067, source: 'pexels' },
+  { id: '20485885', category: '春节', label: '手工红灯笼', keywords: ['春节', '新年', '灯笼', '手工', '节日'], w: 1600, h: 1067, source: 'pexels' },
 ]
 
 export function getLocalImagePool() {
@@ -302,6 +383,48 @@ export function searchLocalPool(query, { limit = 24, seed = 0 } = {}) {
     '工业': ['工厂', '厂房', '制造', '制造业', '车间'],
     '制造': ['工厂', '工业', '厂房', '车间'],
     '车间': ['工厂', '工业', '制造', '厂房'],
+    // 茶 / 饮品类（中国用户高频；本地池若无茶图则走 AI 兜底，避免误映射到咖啡导致图文不符）
+    '茶': ['茶叶', '茶饮', '喝茶', '绿茶', '红茶'],
+    '茶叶': ['茶', '龙井', '绿茶', '茶饮'],
+    '龙井': ['茶叶', '茶', '绿茶', '茶饮'],
+    '绿茶': ['茶', '茶叶', '龙井'],
+    '红茶': ['茶', '茶叶'],
+    '奶茶': ['茶饮', '饮料', '饮品'],
+    '茶饮': ['奶茶', '饮料', '饮品', '茶'],
+    '饮料': ['饮品', '茶饮', '奶茶'],
+    '饮品': ['饮料', '茶饮', '奶茶', '咖啡'],
+    // 更多中国用户高频词
+    '火锅': ['美食', '餐饮', '料理', '食物', '餐厅'],
+    '蛋糕': ['美食', '甜点', '餐饮', '烘焙'],
+    '甜点': ['美食', '蛋糕', '餐饮', '烘焙'],
+    '烘焙': ['美食', '蛋糕', '甜点', '面包'],
+    '面包': ['美食', '烘焙', '餐饮', '食物'],
+    '健身': ['运动', '锻炼', '健身房', '体育'],
+    '瑜伽': ['运动', '健身', '健康', '锻炼'],
+    '跑步': ['运动', '健身', '锻炼', '体育', '马拉松'],
+    '马拉松': ['跑步', '运动', '健身', '比赛', '体育'],
+    '读书': ['教育', '学习', '书', '阅读'],
+    '阅读': ['教育', '读书', '学习', '书'],
+    '书': ['教育', '读书', '阅读', '学习'],
+    '鲜花': ['花', '玫瑰', '春天', '自然'],
+    '花': ['鲜花', '玫瑰', '春天', '自然', '樱花'],
+    '水果': ['美食', '食物', '健康', '餐饮'],
+    '数码': ['科技', '电子', '设备', '智能'],
+    '手机': ['科技', '数码', '电子', '智能'],
+    '电脑': ['科技', '数码', '电子', '办公'],
+    '家居': ['房产', '房屋', '室内', '生活'],
+    '室内': ['家居', '房产', '设计', '建筑'],
+    '职场': ['商务', '办公', '工作', '招聘'],
+    '工作': ['商务', '办公', '职场', '招聘'],
+    // 更多节日/节气
+    '新年': ['春节', '节日', '庆典', '春节'],
+    '端午': ['节日', '传统', '庆典'],
+    '元宵': ['节日', '传统', '春节'],
+    '中秋': ['节日', '月亮', '传统'],
+    '月亮': ['中秋', '节日', '夜晚'],
+    '传统': ['节日', '文化', '庆典'],
+    '国风': ['艺术', '设计', '传统', '文化'],
+    '文化': ['艺术', '传统', '教育'],
   }
   // 关键修复：不再把「整串 query」当作一个 term 去做 includes 匹配（那会导致
   // "新能源汽车充电桩"因含"汽车"二字而误命中跑车图、"空气净化器"因含"净化"而误命中净水设施）。
@@ -312,14 +435,16 @@ export function searchLocalPool(query, { limit = 24, seed = 0 } = {}) {
   for (const term of terms) {
     if (SYNONYMS[term]) SYNONYMS[term].forEach((s) => expandTerms.add(s))
   }
+  // 原始词（用户输入的直接词）权重更高，避免"火锅"被同义词"美食"淹没。
+  // 例如"火锅"应优先返回火锅图，而非一堆泛美食图。
+  const primarySet = new Set(terms)
+  const isPrimary = (term) => primarySet.has(term)
 
   // 匹配打分：完整词相等 > 词是关键词的连续子串 > 关键词是词的子串（均要求 ≥2 字）。
-  // 歧义消解：若 query 里存在 ≥3 字的具体词（如"充电桩""净化器"），这些长词是用户意图的主导。
-  // 当长词在本地池无任何命中时，说明本地池没有贴合图片，应返回空触发 AI 生图兜底，
-  // 而不是用 2 字宽泛词（"汽车""净化"）命中无关图。
+  // 歧义消解（放宽版）：query 含 ≥3 字具体词（如"充电桩""净化器"）时，这些长词是用户意图的主导。
+  // 只有当「长词无命中，且没有任何短词/同义词命中」时才返回空（交给 AI 生图兜底），
+  // 否则降级到短词/同义词的命中结果，保证用户始终能搜到相关图（而非"搜不到"）。
   const longTerms = [...expandTerms].filter((t) => t.length >= 3)
-  // longTermHasHit 只依据 category / keywords 的严格匹配（label 是描述性短语，如"水厂净化器"
-  // 会因含"净化器"子串而误判"空气净化器"有贴题图），避免歧义。
   const longTermHasHit = longTerms.some((term) =>
     POOL.some((img) =>
       (img.category && (img.category === term || img.category.includes(term))) ||
@@ -329,36 +454,42 @@ export function searchLocalPool(query, { limit = 24, seed = 0 } = {}) {
 
   const scored = POOL.map((img) => {
     let score = 0
-    // 1) 命中分类（最高权重）
+    // 1) 命中分类（最高权重）；单字词只允许精确相等；原始词权重 ×1.5
     for (const term of expandTerms) {
-      if (term.length < 2) continue
-      if (img.category && term === img.category) score += 8
-      else if (img.category && img.category.includes(term)) score += 5
+      const w = isPrimary(term) ? 1.5 : 1
+      if (img.category && term === img.category) score += 8 * w
+      else if (img.category && term.length >= 2 && img.category.includes(term)) score += 5 * w
     }
     // 2) 命中 label
     for (const term of expandTerms) {
-      if (term.length < 2) continue
-      if (img.label && term === img.label) score += 6
-      else if (img.label && img.label.includes(term)) score += 3
+      const w = isPrimary(term) ? 1.5 : 1
+      if (img.label && term === img.label) score += 6 * w
+      else if (img.label && term.length >= 2 && img.label.includes(term)) score += 3 * w
     }
-    // 3) 命中关键词
+    // 3) 命中关键词；单字词只允许精确相等（"茶"→"茶"），避免单字子串穿透
     for (const kw of img.keywords) {
       for (const term of expandTerms) {
-        if (term.length < 2) continue
-        if (kw === term) score += 4
-        else if (kw.length >= 2 && term.length >= 2 && kw.includes(term)) score += 2
+        const w = isPrimary(term) ? 1.5 : 1
+        if (kw === term) score += 4 * w
+        else if (kw.length >= 2 && term.length >= 2 && kw.includes(term)) score += 2 * w
       }
     }
     return { img, score }
   }).filter((x) => x.score > 0).sort((a, b) => b.score - a.score)
 
-  // 歧义消解：query 含 ≥3 字主导词但本地池无对应图时，返回空（交给 AI 生图兜底理解具体词），
-  // 避免"新能源汽车充电桩"返回跑车、"空气净化器"返回净水设施这类图文不符。
-  if (longTerms.length > 0 && !longTermHasHit) return []
-
   const results = scored.map((x) => x.img)
-  // 无命中时返回空，由上层触发 AI 生图兜底（而非返回无关默认图）
+  // 放宽：只有「长词无命中且短词也无任何命中」时才返回空（触发 AI 生图兜底）。
+  // 若短词/同义词有命中（如"龙井茶叶"→"茶"→命中饮品/咖啡），则保留这些降级结果，
+  // 避免用户"搜不到任何图"。
   if (results.length === 0) return []
+  // 长词主导词存在但完全无命中，且降级结果里没有任何「同义词命中」（score 来自短词匹配）
+  // 时才清空，避免"新能源汽车充电桩"这类错误返回跑车。判断依据：结果里是否含长词精确命中。
+  if (longTerms.length > 0 && !longTermHasHit) {
+    // 长词无命中：检查降级结果是否真的相关（score 是否来自短词/同义词的强匹配）
+    // 若只有极弱的子串命中（score 很低），倾向返回空交给 AI；否则保留降级结果。
+    const bestScore = scored.length ? scored[0].score : 0
+    if (bestScore < 4) return []
+  }
   return results.slice(0, limit)
 }
 
@@ -371,8 +502,10 @@ const TOKEN_DICT = (() => {
     if (img.label) set.add(img.label)
     for (const kw of img.keywords || []) set.add(kw)
   }
-  // 补充常见海报实体词，增强切词准确性
-  ;['新能源', '汽车', '充电桩', '充电', '净化器', '空气', '净化', '茶叶', '龙井', '马拉松', '跑步', '水厂', '污水处理', '净水', '工业', '工厂', '咖啡', '咖啡店', '情人节', '七夕'].forEach((w) => set.add(w))
+  // 补充常见海报实体词 + 同义词 key，增强切词准确性（确保同义词能命中）
+  const EXTRA = ['新能源', '汽车', '充电桩', '充电', '净化器', '空气', '净化', '茶叶', '龙井', '马拉松', '跑步', '水厂', '污水处理', '净水', '工业', '工厂', '咖啡', '咖啡店', '情人节', '七夕',
+    '茶', '绿茶', '红茶', '奶茶', '茶饮', '饮料', '饮品', '火锅', '蛋糕', '甜点', '烘焙', '面包', '健身', '瑜伽', '读书', '阅读', '书', '鲜花', '花', '水果', '数码', '手机', '电脑', '家居', '室内', '职场', '工作', '新年', '端午', '元宵', '中秋', '月亮', '传统', '国风', '文化', '环境', '环保', '招聘', '求职', '美食', '餐饮', '科技', '旅游', '旅行', '健康', '医疗', '美妆', '婚礼', '婚庆', '房产', '爱情', '浪漫', '告白', '玫瑰', '爱心', '情侣']
+  EXTRA.forEach((w) => set.add(w))
   return [...set].sort((a, b) => b.length - a.length)
 })()
 
@@ -389,10 +522,20 @@ function tokenizeQuery(q) {
       tokens.add(matched)
       rest = rest.slice(matched.length)
     } else {
-      rest = rest.slice(1) // 跳过未命中字符
+      // 未命中字符：尝试收集连续的一段中文/字母作为一个"未知词"整体加入，
+      // 这样同义词映射和匹配仍有机会命中（否则这些词被逐个丢弃，导致搜不到）。
+      const m = rest.match(/^[\u4e00-\u9fa5a-zA-Z0-9]{2,}/)
+      if (m) {
+        tokens.add(m[0])
+        rest = rest.slice(m[0].length)
+      } else {
+        rest = rest.slice(1)
+      }
     }
   }
-  return [...tokens].filter((t) => t && t.length >= 2)
+  // 保留单字词（如"茶""花""书"），但仅当它是「词典里的完整词」时才保留，
+  // 避免把普通单字（如"的""了"）也当作匹配词。
+  return [...tokens].filter((t) => t && (t.length >= 2 || TOKEN_DICT.includes(t)))
 }
 
 export function toPhoto(img) {

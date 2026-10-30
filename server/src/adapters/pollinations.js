@@ -60,8 +60,12 @@ export class PollinationsAdapter {
 }
 
 /**
- * 由一张底图派生出多张视觉变体（裁剪/色调/镜像/缩放），
+ * 由一张底图派生出多张视觉变体（裁剪/色调/镜像/缩放）。
  * 用于绕过匿名层 45 秒限速——一次真实生图即可得到多张可用的差异化底图。
+ *
+ * 关键：@napi-rs/canvas 不渲染 ctx.filter（CSS filter 只是存值，drawImage 时被忽略），
+ * 所以之前的 brightness/sepia/contrast 变体全部无效，导致"3 张一模一样"。
+ * 这里改为「像素级重映射 + 几何变换」的真实差异，确保每张肉眼可见地不同。
  */
 export async function deriveVariants(buffer, count = 4) {
   const { createCanvas, loadImage } = await import('@napi-rs/canvas')
@@ -75,26 +79,78 @@ export async function deriveVariants(buffer, count = 4) {
   for (let i = 0; i < count; i++) {
     ctx.save()
     ctx.clearRect(0, 0, w, h)
-    // 变体策略：0 原图微调 / 1 亮度提亮 / 2 冷暖色温 / 3 水平镜像 / 4 轻微放大裁切
-    const mode = i % 5
     ctx.filter = 'none'
-    if (mode === 1) ctx.filter = 'brightness(1.15) saturate(1.1)'
-    else if (mode === 2) ctx.filter = 'sepia(0.18) saturate(1.2) hue-rotate(-8deg)'
-    else if (mode === 4) ctx.filter = 'contrast(1.08) brightness(1.05)'
+    // 变体策略（按差异从大到小排列，让前 3 张就明显不同）：
+    //   0 原图（仅轻微增强对比）
+    //   1 水平镜像（左右反转，几何差异最大）
+    //   2 高对比 + 去饱和（黑白电影感）
+    //   3 暖色调（像素级加红黄）
+    //   4 放大裁切（不同构图）
+    //   5 冷色调（像素级加蓝青）
+    //   6 提亮 + 饱和（像素级亮度抬升）
+    //   7 上下翻转 + 放大
+    // 通过 modeMap 把 i 映射到不同变体，保证相邻变体差异明显
+    const modeMap = [0, 3, 6, 2, 4, 5, 1, 7]
+    const mode = modeMap[i % modeMap.length]
 
     if (mode === 3) {
       // 水平镜像
       ctx.translate(w, 0)
       ctx.scale(-1, 1)
       ctx.drawImage(img, 0, 0, w, h)
-    } else if (mode === 4) {
-      // 放大 8% 中心裁切（模拟不同构图）
-      const scale = 1.08
+    } else if (mode === 4 || mode === 7) {
+      // 放大裁切（模拟不同构图）
+      const scale = mode === 7 ? 1.18 : 1.08
       const sw = w / scale
       const sh = h / scale
-      ctx.drawImage(img, (w - sw) / 2, (h - sh) / 2, sw, sh, 0, 0, w, h)
+      const offX = mode === 7 ? 0 : (w - sw) / 2
+      const offY = mode === 7 ? 0 : (h - sh) / 2
+      ctx.drawImage(img, offX, offY, sw, sh, 0, 0, w, h)
+      if (mode === 7) {
+        // 上下翻转
+        ctx.translate(0, h)
+        ctx.scale(1, -1)
+        ctx.drawImage(canvas, 0, 0)
+      }
     } else {
       ctx.drawImage(img, 0, 0, w, h)
+      // 像素级色调重映射（filter 无效，改用 ImageData 手动处理）
+      const data = ctx.getImageData(0, 0, w, h)
+      const px = data.data
+      for (let p = 0; p < px.length; p += 4) {
+        let r = px[p], g = px[p + 1], b = px[p + 2]
+        if (mode === 0) {
+          // 轻微增强对比
+          r = 128 + (r - 128) * 1.06
+          g = 128 + (g - 128) * 1.06
+          b = 128 + (b - 128) * 1.06
+        } else if (mode === 1) {
+          // 提亮 + 饱和
+          const lum = 0.299 * r + 0.587 * g + 0.114 * b
+          r = r + (r - lum) * 0.22 + 24
+          g = g + (g - lum) * 0.22 + 24
+          b = b + (b - lum) * 0.22 + 24
+        } else if (mode === 2) {
+          // 暖色调
+          r = r + 22
+          g = g + 8
+          b = b - 18
+        } else if (mode === 5) {
+          // 冷色调
+          r = r - 16
+          g = g - 4
+          b = b + 22
+        } else if (mode === 6) {
+          // 高对比 + 去饱和（黑白电影感）
+          const lum = 0.299 * r + 0.587 * g + 0.114 * b
+          const g2 = 128 + (lum - 128) * 1.28
+          r = g2; g = g2; b = g2
+        }
+        px[p] = Math.max(0, Math.min(255, r))
+        px[p + 1] = Math.max(0, Math.min(255, g))
+        px[p + 2] = Math.max(0, Math.min(255, b))
+      }
+      ctx.putImageData(data, 0, 0)
     }
     ctx.restore()
     variants.push({ buffer: canvas.toBuffer('image/jpeg', 88), variant: i })
