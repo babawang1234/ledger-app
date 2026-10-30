@@ -7,8 +7,10 @@ client/dist/
 server/dist/
 
 # 运行时数据（本地数据库、上传文件、导出文件）
-server/data/*.db
-server/data/*.db-*
+# app.db 主数据库纳入 Git 版本管理，实现换电脑同步数据（开发阶段单机串行使用）
+server/data/*.db-shm
+server/data/*.db-wal
+server/data/*.db-journal
 server/data/gen-cache/*
 server/uploads/*
 server/exports/*
