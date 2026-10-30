@@ -58,11 +58,12 @@ router.get('/search', asyncHandler(async (req, res) => {
             }
           })
         } else {
-          // 层 2：智谱免费生图（真·多张不同图）
+          // 层 2：智谱免费生图（串行多张不同图，免费档不支持 n 参数）
           const { ZhipuAdapter } = await import('../adapters/zhipu.js')
           const zhipu = new ZhipuAdapter()
           if (zhipu.available) {
-            const { urls } = await zhipu.generateImage({ prompt, width: 1080, height: 1440, n: 4 })
+            // 免费档串行限速，n=3 约需 30 秒内返回；配合缓存复用，实际只生成一次
+            const { urls } = await zhipu.generateImage({ prompt, width: 1080, height: 1440, n: 3 })
             const buffers = await Promise.all(
               urls.map(async (u) => {
                 const r = await fetch(u, { signal: AbortSignal.timeout(30000) })

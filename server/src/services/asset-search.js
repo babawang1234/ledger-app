@@ -1,5 +1,6 @@
 import { config } from '../config/index.js'
 import { searchLocalPool, toPhoto } from '../lib/local-image-pool.js'
+import { searchCnAssets } from './cn-assets.js'
 
 const CACHE_TTL = 5 * 60 * 1000
 const cache = new Map()
@@ -187,6 +188,7 @@ export async function searchAssetImages({ query, originalQuery, orientation, per
 
   const jobs = []
   for (const searchQuery of queries) {
+    jobs.push({ provider: 'cn', promise: searchCnAssets(searchQuery, { limit: Math.max(8, Math.ceil(perPage / queries.length)) }) })
     jobs.push({ provider: 'openverse', promise: searchOpenverse(searchQuery, orientation, Math.max(6, Math.ceil(perPage / queries.length))) })
     if (config.providers.pixabay.apiKey) jobs.push({ provider: 'pixabay', promise: searchPixabay(searchQuery, orientation, Math.max(6, Math.ceil(perPage / queries.length))) })
     if (config.providers.unsplash.accessKey) jobs.push({ provider: 'unsplash', promise: searchUnsplash(searchQuery, orientation, Math.max(6, Math.ceil(perPage / queries.length))) })
@@ -224,7 +226,13 @@ export async function searchAssetImages({ query, originalQuery, orientation, per
     }
   }
   const merged = [...photos, ...localPhotos]
-  const unique = [...new Map(merged.map((photo) => [`${photo.provider}:${photo.id}`, photo])).values()].slice(0, perPage)
+  // 中文素材优先展示（解决「都是外国图」）
+  const sorted = merged.sort((a, b) => {
+    const aCn = a.provider === 'cn' ? 0 : 1
+    const bCn = b.provider === 'cn' ? 0 : 1
+    return aCn - bCn
+  })
+  const unique = [...new Map(sorted.map((photo) => [`${photo.provider}:${photo.id}`, photo])).values()].slice(0, perPage)
   const finalProviders = [...new Set(unique.map((photo) => photo.provider))]
 
   const value = {

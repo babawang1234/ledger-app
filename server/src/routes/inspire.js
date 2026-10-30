@@ -167,6 +167,60 @@ router.post(
     const count = Math.min(4, Math.max(1, Number(req.body?.count) || 3))
     if (!keyword) return res.status(400).json({ error: 'EMPTY_KEYWORD', message: '请提供关键词' })
 
+    // 0) 尝试智谱 CogView-3-Flash（免费、中文理解强、国内直连）—— 优先
+    const { ZhipuAdapter } = await import('../adapters/zhipu.js')
+    const { getCachedGeneration, setCachedGeneration } = await import('../lib/gen-cache.js')
+    const zhipu = new ZhipuAdapter()
+    if (zhipu.available) {
+      // 缓存命中：同一关键词直接复用，不消耗免费额度
+      const cached = getCachedGeneration(keyword, 1024, 1024)
+      if (cached && cached.length) {
+        const images = cached.map((buf, i) => {
+          const dataUrl = encodeBufferToDataUrl(buf, 'image/jpeg')
+          return {
+            id: `ai-zhipu-cache-${Date.now()}-${i}`,
+            provider: 'ai', sourceName: 'AI 生成',
+            url: dataUrl, thumb: dataUrl,
+            description: `${keyword} · AI 生成底图 ${i + 1}`,
+            photographer: 'AI 生成', license: 'AI 生成 · 可商用',
+          }
+        })
+        return res.json({ images, provider: 'zhipu', message: '', cached: true })
+      }
+      // 未命中：真实生成多张（串行，免费档限速）
+      try {
+        // 关键：cogview 对「纯关键词」+「方版 1024x1024」理解最稳，竖版跑题率高。
+        // 用方版生成（海报场景下留白可后期裁剪），避免竖版导致火锅→山水画。
+        const { urls } = await zhipu.generateImage({ prompt: keyword, width: 1024, height: 1024, n: count })
+        if (urls.length) {
+          const buffers = []
+          for (const u of urls) {
+            try {
+              const r = await fetch(u, { signal: AbortSignal.timeout(30000) })
+              if (r.ok) buffers.push(Buffer.from(await r.arrayBuffer()))
+            } catch (e) { console.warn('[inspire] 下载智谱图失败：', e.message) }
+          }
+          if (buffers.length) setCachedGeneration(keyword, 1024, 1024, buffers)
+          const images = buffers.map((buf, i) => {
+            const dataUrl = encodeBufferToDataUrl(buf, 'image/jpeg')
+            return {
+              id: `ai-zhipu-${Date.now()}-${i}`,
+              provider: 'ai', sourceName: 'AI 生成',
+              url: dataUrl, thumb: dataUrl,
+              description: `${keyword} · AI 生成底图 ${i + 1}`,
+              photographer: 'AI 生成', license: 'AI 生成 · 可商用',
+            }
+          })
+          if (images.length) {
+            return res.json({ images, provider: 'zhipu', message: '' })
+          }
+        }
+      } catch (e) {
+        console.warn('[inspire] 智谱生成失败：', e.message)
+      }
+      // 智谱失败 → 继续降级万相
+    }
+
     // 1) 尝试通义万相（真实 AI 生图，中文理解最好）
     const { WanxAdapter } = await import('../adapters/wanx.js')
     const wanx = new WanxAdapter()
