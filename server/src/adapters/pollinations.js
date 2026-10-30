@@ -60,6 +60,49 @@ export class PollinationsAdapter {
 }
 
 /**
+ * 由一张底图派生出多张视觉变体（裁剪/色调/镜像/缩放），
+ * 用于绕过匿名层 45 秒限速——一次真实生图即可得到多张可用的差异化底图。
+ */
+export async function deriveVariants(buffer, count = 4) {
+  const { createCanvas, loadImage } = await import('@napi-rs/canvas')
+  const img = await loadImage(buffer)
+  const w = img.width
+  const h = img.height
+  const variants = []
+  const canvas = createCanvas(w, h)
+  const ctx = canvas.getContext('2d')
+
+  for (let i = 0; i < count; i++) {
+    ctx.save()
+    ctx.clearRect(0, 0, w, h)
+    // 变体策略：0 原图微调 / 1 亮度提亮 / 2 冷暖色温 / 3 水平镜像 / 4 轻微放大裁切
+    const mode = i % 5
+    ctx.filter = 'none'
+    if (mode === 1) ctx.filter = 'brightness(1.15) saturate(1.1)'
+    else if (mode === 2) ctx.filter = 'sepia(0.18) saturate(1.2) hue-rotate(-8deg)'
+    else if (mode === 4) ctx.filter = 'contrast(1.08) brightness(1.05)'
+
+    if (mode === 3) {
+      // 水平镜像
+      ctx.translate(w, 0)
+      ctx.scale(-1, 1)
+      ctx.drawImage(img, 0, 0, w, h)
+    } else if (mode === 4) {
+      // 放大 8% 中心裁切（模拟不同构图）
+      const scale = 1.08
+      const sw = w / scale
+      const sh = h / scale
+      ctx.drawImage(img, (w - sw) / 2, (h - sh) / 2, sw, sh, 0, 0, w, h)
+    } else {
+      ctx.drawImage(img, 0, 0, w, h)
+    }
+    ctx.restore()
+    variants.push({ buffer: canvas.toBuffer('image/jpeg', 88), variant: i })
+  }
+  return variants
+}
+
+/**
  * 去除右下角 pollinations.ai 水印。
  * 匿名层 nologo 参数不稳定，水印固定在右下角，用画布把右下角一小块用相邻像素覆盖。
  */
@@ -73,23 +116,25 @@ async function removeWatermark(buffer) {
     const ctx = canvas.getContext('2d')
     ctx.drawImage(img, 0, 0, w, h)
 
-    // 水印位于底部（右下角或底部居中），位置不固定。
-    // 稳妥做法：覆盖底部一整条（高约 12%），用该条上方的平均色填充。
-    const mh = Math.round(h * 0.12)
+    // 水印位于右下角，较小（约占宽 18%、高 8%）。只覆盖右下角小块，
+    // 用该区域左上方邻域的像素平均色填充，避免整条底部被抹掉。
+    const mw = Math.round(w * 0.18)
+    const mh = Math.round(h * 0.08)
+    const mx = w - mw
     const my = h - mh
 
-    // 取水印区上方一行像素的平均色作为覆盖色
-    const sampleY = Math.max(0, my - 3)
-    const sample = ctx.getImageData(0, sampleY, w, 3)
+    // 取水印区上方一行的平均色作为覆盖色
+    const sampleY = Math.max(0, my - 2)
+    const sample = ctx.getImageData(mx, sampleY, mw, 2)
     const data = sample.data
     const pxCount = data.length / 4
     let r = 0, g = 0, b = 0
     for (let i = 0; i < data.length; i += 4) { r += data[i]; g += data[i + 1]; b += data[i + 2] }
     r = Math.round(r / pxCount); g = Math.round(g / pxCount); b = Math.round(b / pxCount)
 
-    // 用平均色填充底部整条（覆盖水印）
+    // 用平均色填充右下角小块（覆盖水印）
     ctx.fillStyle = `rgb(${r},${g},${b})`
-    ctx.fillRect(0, my, w, mh)
+    ctx.fillRect(mx, my, mw, mh)
 
     return canvas.toBuffer('image/jpeg', 90)
   } catch (e) {

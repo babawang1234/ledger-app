@@ -5,6 +5,8 @@ import { db } from '../lib/db.js'
 import { draftCopy, parseBrief, scoreTemplates } from '../skills/poster/interpret.js'
 import { autoRoute, invoke } from '../adapters/index.js'
 import { searchLocalPool, toPhoto } from '../lib/local-image-pool.js'
+import { generateLayouts } from '../lib/layouts.js'
+import { renderPoster, encodeBufferToDataUrl } from '../lib/renderer.js'
 import path from 'path'
 import fs from 'fs'
 import { fileURLToPath } from 'url'
@@ -214,19 +216,21 @@ router.post(
     }
 
     // 2) 尝试 Pollinations（免 Key 免费真实生图，英文 prompt）
-    const { PollinationsAdapter } = await import('../adapters/pollinations.js')
+    const { PollinationsAdapter, deriveVariants } = await import('../adapters/pollinations.js')
     const { buildImagePromptVariants } = await import('../lib/image-prompt.js')
     const pollinations = new PollinationsAdapter()
     if (pollinations.available) {
-      // Pollinations 匿名层限速 45 秒/张，多张会排队且大多触发 402。
-      // 策略：每次只生成 1 张（秒回），用户可连续点击"AI 生成"获取不同底图。
-      const prompts = buildImagePromptVariants(keyword, count)
+      // Pollinations 匿名层限速 45 秒/张。策略：只真实生成 1 张，再派生多张视觉变体，
+      // 让用户一次看到多张贴题、可用的底图（而非只返回 1 张）。
+      const prompts = buildImagePromptVariants(keyword, 1)
       const images = []
-      for (let i = 0; i < prompts.length; i++) {
-        try {
-          const { buffer } = await pollinations.generateImage({ prompt: prompts[i], width: 1080, height: 1440 })
+      try {
+        const { buffer } = await pollinations.generateImage({ prompt: prompts[0], width: 1080, height: 1440 })
+        // 由 1 张真图派生多张变体，规避限速
+        const variants = await deriveVariants(buffer, Math.max(1, count))
+        variants.forEach((v, i) => {
           const filename = `ai-p-${Date.now()}-${i}.jpg`
-          fs.writeFileSync(path.join(aiImgDir, filename), buffer)
+          fs.writeFileSync(path.join(aiImgDir, filename), v.buffer)
           images.push({
             id: `ai-p-${Date.now()}-${i}`,
             provider: 'ai',
@@ -237,18 +241,15 @@ router.post(
             photographer: 'AI 生成',
             license: 'AI 生成 · 可商用',
           })
-          // 免费服务限速，第 2 张起大概率 402；生成 1 张后立即返回，不阻塞用户
-          break
-        } catch (e) {
-          console.warn(`[inspire] Pollinations 生成第 ${i + 1} 张失败：${e.message}`)
-          if (e.status === 402) break // 限流，停止后续请求
-        }
+        })
+      } catch (e) {
+        console.warn(`[inspire] Pollinations 生成失败：${e.message}`)
       }
       if (images.length) {
         return res.json({
           images,
           provider: 'pollinations',
-          message: '已生成 1 张（免费 AI 生图服务限速，可再次点击「AI 生成」获取新的一张）',
+          message: images.length >= count ? '' : `已生成 ${images.length} 张（免费 AI 生图限速，可再次点击生成新的一组）`,
         })
       }
     }
@@ -280,6 +281,103 @@ router.post(
       fallback: 'local-design',
       provider: 'local-design',
       message: 'AI 生图服务暂不可用，已返回设计底图（非 AI 生成）。',
+    })
+  })
+)
+
+/**
+ * 一键成片：输入一句需求 → 自动完成「理解 → 找底图（本地图库 / AI 生图）→ 排版成海报」。
+ * 直接返回可编辑的版式方案（含缩略图），让用户无需手动下拉搜图。
+ */
+router.post(
+  '/one-shot',
+  asyncHandler(async (req, res) => {
+    const description = String(req.body?.description || '').trim().slice(0, 500)
+    if (!description) return res.status(400).json({ error: 'EMPTY_DESCRIPTION', message: '请描述你想做的海报' })
+
+    // 1) 理解需求（复用 interpret 的解析逻辑）
+    const fallback = parseBrief(description)
+    const brief = fallback
+    const content = draftCopy(description, brief.purpose, brief.concepts)
+    const subjectQuery = (brief.subject || brief.concepts[0]?.matched[0] || description).slice(0, 60)
+
+    // 2) 获取底图：优先本地图库池（内容已校验），无命中则 AI 生图兜底
+    const canvas = { width: 1080, height: 1440 }
+    let stockAsset = null
+    let backgroundSource = 'none'
+
+    const localPoolHits = searchLocalPool(subjectQuery, { limit: 1 })
+    if (localPoolHits.length) {
+      stockAsset = toPhoto(localPoolHits[0])
+      backgroundSource = 'library'
+    }
+
+    if (!stockAsset) {
+      // AI 生图兜底（理解任意具体词）
+      try {
+        const { PollinationsAdapter } = await import('../adapters/pollinations.js')
+        const { keywordToImagePrompt } = await import('../lib/image-prompt.js')
+        const pollinations = new PollinationsAdapter()
+        if (pollinations.available) {
+          const prompt = keywordToImagePrompt(subjectQuery)
+          if (prompt) {
+            const { buffer } = await pollinations.generateImage({ prompt, width: 1080, height: 1440 })
+            const aiImgDir = path.resolve(__dirname, '../../public/ai-images')
+            fs.mkdirSync(aiImgDir, { recursive: true })
+            const filename = `ai-shot-${Date.now()}.jpg`
+            fs.writeFileSync(path.join(aiImgDir, filename), buffer)
+            stockAsset = {
+              id: `ai-shot-${Date.now()}`,
+              provider: 'ai',
+              sourceName: 'AI 生成',
+              url: `/ai-images/${filename}`,
+              thumb: `/ai-images/${filename}`,
+              photographer: 'AI 生成',
+              license: 'AI 生成 · 可商用',
+            }
+            backgroundSource = 'ai'
+          }
+        }
+      } catch (e) {
+        console.warn('[inspire] one-shot AI 兜底失败：', e.message)
+      }
+    }
+
+    // 3) 生成版式方案（直接用 stockAsset 排版，无需真实图像模型）
+    const styleAnalysis = brief.styleKey
+      ? { preset: brief.styleKey }
+      : undefined
+    const layouts = generateLayouts({
+      content,
+      purpose: brief.purpose,
+      canvas,
+      styleAnalysis,
+      stockAsset,
+    })
+
+    // 4) 渲染缩略图
+    const results = []
+    for (const l of layouts) {
+      const buf = await renderPoster({ width: canvas.width, height: canvas.height, background: l.background, layers: l.layers })
+      results.push({
+        name: l.name,
+        feature: l.feature,
+        palette: l.palette,
+        canvas: l.canvas,
+        background: l.background,
+        layers: l.layers,
+        stockAttribution: l.stockAttribution,
+        thumbnail: encodeBufferToDataUrl(buf),
+      })
+    }
+
+    res.json({
+      brief: { ...brief, mock: true },
+      content,
+      backgroundSource,
+      stockAsset,
+      layouts: results,
+      message: results.length ? '' : '生成失败，请重试。',
     })
   })
 )

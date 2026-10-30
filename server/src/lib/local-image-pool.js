@@ -226,6 +226,33 @@ const POOL = [
   { id: '32711479', category: '自然', label: '森林光', keywords: ['自然', '森林', '光', '环保', '环境'], w: 1600, h: 1067, source: 'pexels' },
   { id: '13248795', category: '自然', label: '日落河景', keywords: ['自然', '日落', '河', '风景', '环境'], w: 1600, h: 1067, source: 'pexels' },
   { id: '29159501', category: '自然', label: '森林野餐', keywords: ['自然', '森林', '野餐', '环保', '环境'], w: 1600, h: 1067, source: 'pexels' },
+
+  // ==== 补充：水厂 / 水务 / 工业（Pexels 真实抓取，内容已确认）====
+  { id: '27490881', category: '水厂', label: '水厂净化池', keywords: ['水厂', '污水处理', '净水', '水务', '水处理', '自来水', '环保工程'], w: 1600, h: 1067, source: 'pexels' },
+  { id: '12571590', category: '水厂', label: '乡间工业厂房', keywords: ['水厂', '工业', '厂房', '工厂', '制造业'], w: 1600, h: 1067, source: 'pexels' },
+  { id: '35425761', category: '水厂', label: '水处理设施航拍', keywords: ['水厂', '水处理', '净水设施', '水务', '污水厂'], w: 1600, h: 1067, source: 'pexels' },
+  { id: '24802113', category: '水厂', label: '净水设施航拍', keywords: ['水厂', '净水', '水处理', '净化', '水务'], w: 1600, h: 1067, source: 'pexels' },
+  { id: '35627363', category: '水厂', label: '水处理设施', keywords: ['水厂', '水处理', '净水', '设施', '污水'], w: 1600, h: 1067, source: 'pexels' },
+  { id: '5712211', category: '水厂', label: '污水处理厂航拍', keywords: ['水厂', '污水', '处理厂', '环保', '水务'], w: 1600, h: 1067, source: 'pexels' },
+  { id: '27490882', category: '水厂', label: '水厂航拍', keywords: ['水厂', '水处理', '净水', '航拍', '水务'], w: 1600, h: 1067, source: 'pexels' },
+  { id: '5092287', category: '水厂', label: '水处理排气设备', keywords: ['水厂', '水处理', '设备', '净水', '工业'], w: 1600, h: 1067, source: 'pexels' },
+  { id: '12726229', category: '水厂', label: '水厂净化器', keywords: ['水厂', '净水器', '水处理', '净化', '设备'], w: 1600, h: 1067, source: 'pexels' },
+  { id: '4741970', category: '水厂', label: '污水处理池', keywords: ['水厂', '污水', '处理池', '净水', '环保'], w: 1600, h: 1067, source: 'pexels' },
+  { id: '35425759', category: '水厂', label: '现代净水设施', keywords: ['水厂', '净水', '水处理', '设施', '现代'], w: 1600, h: 1067, source: 'pexels' },
+  { id: '3808769', category: '水厂', label: '污水处理厂', keywords: ['水厂', '污水', '处理厂', '环保', '水务'], w: 1600, h: 1067, source: 'pexels' },
+
+  // ==== 补充：工厂 / 工业 / 制造（Pexels 真实抓取，内容已确认）====
+  { id: '36915547', category: '工厂', label: '蓝天下的工业设施', keywords: ['工厂', '工业', '厂房', '制造业', '车间'], w: 1600, h: 1067, source: 'pexels' },
+  { id: '28572048', category: '工厂', label: '砖砌烟囱工厂', keywords: ['工厂', '烟囱', '工业', '制造', '厂房'], w: 1600, h: 1067, source: 'pexels' },
+  { id: '36794532', category: '工厂', label: '水泥工厂', keywords: ['工厂', '水泥', '工业', '制造', '厂房'], w: 1600, h: 1067, source: 'pexels' },
+  { id: '29289938', category: '工厂', label: '工业园区航拍', keywords: ['工厂', '工业', '园区', '厂房', '制造'], w: 1600, h: 1067, source: 'pexels' },
+  { id: '5115940', category: '工厂', label: '城市仓储', keywords: ['工厂', '仓储', '物流', '厂房', '工业'], w: 1600, h: 1067, source: 'pexels' },
+  { id: '5470449', category: '工厂', label: '日落工业厂房', keywords: ['工厂', '工业', '厂房', '日落', '制造'], w: 1600, h: 1067, source: 'pexels' },
+  { id: '33626643', category: '工厂', label: '工业厂房群航拍', keywords: ['工厂', '工业', '厂房', '制造', '园区'], w: 1600, h: 1067, source: 'pexels' },
+  { id: '15866139', category: '工厂', label: '管道工厂建筑', keywords: ['工厂', '管道', '工业', '厂房', '制造'], w: 1600, h: 1067, source: 'pexels' },
+  { id: '37125625', category: '工厂', label: '蓝天下的工业厂房', keywords: ['工厂', '工业', '厂房', '排放', '制造'], w: 1600, h: 1067, source: 'pexels' },
+  { id: '6754764', category: '工厂', label: '工业建筑航拍', keywords: ['工厂', '工业', '建筑', '厂房', '航拍'], w: 1600, h: 1067, source: 'pexels' },
+  { id: '3732951', category: '工厂', label: '工业区航拍', keywords: ['工厂', '工业', '区域', '厂房', '制造'], w: 1600, h: 1067, source: 'pexels' },
 ]
 
 export function getLocalImagePool() {
@@ -266,39 +293,49 @@ export function searchLocalPool(query, { limit = 24, seed = 0 } = {}) {
     '浪漫': ['爱情', '玫瑰', '爱心', '情侣', '情人节'],
     '告白': ['表白', '爱情', '浪漫', '情侣', '礼物'],
     '玫瑰': ['爱情', '浪漫', '情人节', '花朵', '红'],
+    // 水厂 / 工厂 / 工业类
+    '水厂': ['水处理', '净水', '水务', '污水处理', '自来水', '污水厂'],
+    '净水': ['水厂', '水处理', '水务', '净化'],
+    '水处理': ['水厂', '净水', '水务', '污水'],
+    '污水处理': ['水厂', '污水', '净水', '水务', '环保'],
+    '工厂': ['工业', '厂房', '制造', '车间', '制造业'],
+    '工业': ['工厂', '厂房', '制造', '制造业', '车间'],
+    '制造': ['工厂', '工业', '厂房', '车间'],
+    '车间': ['工厂', '工业', '制造', '厂房'],
   }
   const expandTerms = new Set([q])
   for (const [k, syns] of Object.entries(SYNONYMS)) {
     if (q.includes(k)) syns.forEach((s) => expandTerms.add(s))
   }
 
+  // 匹配打分：完整词 > 子串包含；避免"水厂"因含"水"字误命中"瀑布"。
+  // 关键：单字子串不再作为命中依据，只有 ≥2 字的完整词或明确的 category/label 相等才算命中。
   const scored = POOL.map((img) => {
     let score = 0
-    // 命中关键词（含同义词）
+    // 1) 命中分类（最高权重）
+    for (const term of expandTerms) {
+      if (img.category && term === img.category) score += 8
+      else if (img.category && term.length >= 2 && img.category.includes(term)) score += 5
+    }
+    // 2) 命中 label（完整相等权重高）
+    for (const term of expandTerms) {
+      if (img.label && term === img.label) score += 6
+      else if (img.label && term.length >= 2 && img.label.includes(term)) score += 3
+    }
+    // 3) 命中关键词：完整相等优先；子串包含要求双方都 ≥2 字且非单字
     for (const kw of img.keywords) {
       for (const term of expandTerms) {
-        if (kw.includes(term) || term.includes(kw)) {
-          score += kw.length >= 2 ? 2 : 1
-        }
+        if (!term || term.length < 2) continue // 单字词不作为命中依据
+        if (kw === term) score += 4
+        else if (kw.length >= 2 && (kw.includes(term) || term.includes(kw))) score += 1
       }
-    }
-    // 命中分类
-    for (const term of expandTerms) {
-      if (img.category && (term.includes(img.category) || img.category.includes(term))) score += 3
-    }
-    // 命中标签
-    for (const term of expandTerms) {
-      if (img.label && (term.includes(img.label) || img.label.includes(term))) score += 1
     }
     return { img, score }
   }).filter((x) => x.score > 0).sort((a, b) => b.score - a.score)
 
   const results = scored.map((x) => x.img)
-  // 无命中时不再返回无关的"环保/风景"默认图——那会造成"输入什么都出森林图"的假思考。
-  // 改为返回空数组，由上层 asset-search 给出明确提示。
-  if (results.length === 0) {
-    return []
-  }
+  // 无命中时返回空，由上层触发 AI 生图兜底（而非返回无关默认图）
+  if (results.length === 0) return []
   return results.slice(0, limit)
 }
 

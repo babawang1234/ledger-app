@@ -149,11 +149,15 @@ export async function searchAssetImages({ query, originalQuery, orientation, per
   // 本地图库池兜底：当外部图库（无 Key 或网络不通）返回空时，用本地预置的真实图片补充
   let localPhotos = []
   let localFallback = false
+  let aiFallback = false
   if (photos.length === 0) {
     localPhotos = searchLocalPool(queries[0], { limit: perPage }).map(toPhoto)
     if (localPhotos.length) {
       localFallback = true
       localPhotos.forEach((p) => providers.push(p.provider))
+    } else {
+      // 本地池也无命中：标记需要上层用 AI 生图兜底（理解任意具体词，如"水厂"）
+      aiFallback = true
     }
   }
   const merged = [...photos, ...localPhotos]
@@ -165,6 +169,7 @@ export async function searchAssetImages({ query, originalQuery, orientation, per
     providers: finalProviders,
     unavailable,
     localFallback,
+    aiFallback,
     providerStatus: {
       openverse: failures.some((failure) => failure.provider === 'openverse') ? 'unreachable' : 'available',
       pexels: !hasPexelsKey ? 'key_required' : authFailures.some((failure) => failure.provider === 'pexels') ? 'invalid_key' : unavailable.includes('pexels') ? 'unreachable' : 'available',

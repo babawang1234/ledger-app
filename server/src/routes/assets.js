@@ -31,6 +31,42 @@ router.get('/search', asyncHandler(async (req, res) => {
   const limit = Math.min(48, Math.max(12, Number(req.query.limit) || 36))
   const result = await searchAssetImages({ query, originalQuery, orientation, perPage: limit })
 
+  // 关键兜底：图库 + 本地池都无命中时（aiFallback），用真实 AI 生图按关键词生成贴题图，
+  // 解决"换任意关键词搜不出、图文不符"的根本问题（AI 能理解"水厂"等具体实体词）。
+  let aiGeneratedPhotos = []
+  if (result.aiFallback && result.photos.length === 0) {
+    try {
+      const { PollinationsAdapter, deriveVariants } = await import('../adapters/pollinations.js')
+      const { keywordToImagePrompt } = await import('../lib/image-prompt.js')
+      const pollinations = new PollinationsAdapter()
+      if (pollinations.available) {
+        const prompt = keywordToImagePrompt(query)
+        if (prompt) {
+          const { buffer } = await pollinations.generateImage({ prompt, width: 1080, height: 1440 })
+          const aiImgDir = path.resolve(__dirname, '../../public/ai-images')
+          fs.mkdirSync(aiImgDir, { recursive: true })
+          const variants = await deriveVariants(buffer, 3)
+          aiGeneratedPhotos = variants.map((v, i) => {
+            const filename = `ai-search-${Date.now()}-${i}.jpg`
+            fs.writeFileSync(path.join(aiImgDir, filename), v.buffer)
+            return {
+              id: `ai-search-${Date.now()}-${i}`,
+              provider: 'ai',
+              sourceName: 'AI 生成',
+              description: `${query} · AI 生成贴题图 ${i + 1}`,
+              url: `/ai-images/${filename}`,
+              thumb: `/ai-images/${filename}`,
+              photographer: 'AI 生成',
+              license: 'AI 生成 · 可商用',
+            }
+          })
+        }
+      }
+    } catch (e) {
+      console.warn('[assets] AI 兜底生图失败：', e.message)
+    }
+  }
+
   // 生成"设计底图"（虚拟背景）：摄影图之外，再给用户提供设计感的抽象背景
   let designBackdrops = []
   try {
@@ -59,7 +95,14 @@ router.get('/search', asyncHandler(async (req, res) => {
     console.warn('[assets] 设计底图生成失败：', e.message)
   }
 
-  res.json({ ...result, designBackdrops })
+  const photos = [...result.photos, ...aiGeneratedPhotos]
+  res.json({
+    ...result,
+    photos,
+    aiFallback: !!aiGeneratedPhotos.length,
+    message: photos.length ? '' : result.message,
+    designBackdrops,
+  })
 }))
 
 // 单独获取"设计底图"（虚拟背景）——供「设计底图」Tab 使用

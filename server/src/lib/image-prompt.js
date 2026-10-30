@@ -51,6 +51,11 @@ const TOPIC_MAP = [
   { keys: ['教育', '学习', '读书', '知识', '培训'], en: 'a bright study scene with books and warm light, inspiring learning atmosphere, space for text' },
   { keys: ['音乐', '演唱会', '乐器', '演出'], en: 'a dramatic music stage with colorful lights and instruments, energetic performance mood, space for text' },
   { keys: ['艺术', '设计', '创意', '插画', '美学'], en: 'an artistic abstract composition with bold colors and creative shapes, modern design, space for text' },
+
+  // 工业 / 制造 / 水厂（新增，解决"水厂"等具体实体词理解）
+  { keys: ['水厂', '净水', '水处理', '污水处理', '自来水', '水务'], en: 'a modern water treatment plant with circular settling tanks and clean industrial facilities, aerial view, blue and white industrial tones, professional engineering photography, space for text' },
+  { keys: ['工厂', '工业', '制造', '车间', '厂房'], en: 'a modern industrial factory with clean production facilities and machinery, blue grey industrial tones, professional manufacturing photography, space for text' },
+  { keys: ['电力', '发电', '能源', '电站'], en: 'a modern power plant with cooling towers and transmission lines, blue sky, industrial energy photography, space for text' },
 ]
 
 // 通用摄影背景模板（兜底，保证不跑题到无关内容）
